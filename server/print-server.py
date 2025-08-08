@@ -26,6 +26,7 @@ def get_font_path(base_path, bold=False, italic=False):
 
     return os.path.join(dirname, new_font)
 
+
 def wrap_text(draw, text, font, max_width):
     words = text.split()
     lines = []
@@ -45,7 +46,9 @@ def wrap_text(draw, text, font, max_width):
     return lines
 
 def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.Image:
-    img = Image.new("RGB", (CANVAS_WIDTH, 2000), "white")
+    MAX_HEIGHT = 10000  # Tall enough to fit even very long receipts
+
+    img = Image.new("RGB", (CANVAS_WIDTH, MAX_HEIGHT), "white")
     draw = ImageDraw.Draw(img)
     y_offset = 0
 
@@ -60,45 +63,53 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
 
             font_path_using = get_font_path(font_path, bold=bold, italic=italic)
             try:
-                font_style = ImageFont.truetype(font_path_using, font_size)
+                font = ImageFont.truetype(font_path_using, font_size)
             except IOError:
-                # Fallback to base font if style file not found
-                font_style = ImageFont.truetype(DEFAULT_FONT_PATH, font_size)
+                font = ImageFont.truetype(DEFAULT_FONT_PATH, font_size)
 
-            lines = wrap_text(draw, text, font_style, CANVAS_WIDTH - 40)
-            for line in lines:
-                bbox = draw.textbbox((0, 0), line, font=font_style)
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
+            # Split text on newlines and wrap each separately
+            for paragraph in text.split('\n'):
+                lines = wrap_text(draw, paragraph, font, CANVAS_WIDTH - 40)
+                for line in lines:
+                    bbox = draw.textbbox((0, 0), line, font=font)
+                    text_width = bbox[2] - bbox[0]
+                    text_height = bbox[3] - bbox[1]
 
-                if align == "center":
-                    x = (CANVAS_WIDTH - text_width) // 2
-                elif align == "right":
-                    x = CANVAS_WIDTH - text_width - 20
-                else:
-                    x = 20
+                    if align == "center":
+                        x = (CANVAS_WIDTH - text_width) // 2
+                    elif align == "right":
+                        x = CANVAS_WIDTH - text_width - 20
+                    else:
+                        x = 20
 
-                draw.text((x, y_offset), line, font=font_style, fill="black")
+                    draw.text((x, y_offset), line, font=font, fill="black")
 
-                if underline:
-                    draw.line(
-                        (x, y_offset + text_height + 4, x + text_width, y_offset + text_height + 4),
-                        fill="black",
-                        width=1,
-                    )
+                    if underline:
+                        draw.line(
+                            (x, y_offset + text_height + 4, x + text_width, y_offset + text_height + 4),
+                            fill="black",
+                            width=1,
+                        )
 
-                y_offset += text_height + 5
-            y_offset += 5
+                    y_offset += text_height + 5
+                y_offset += 5
+
         elif component["type"] == "divider":
-            padding_above = 10
-            y_offset += padding_above
-
+            y_offset += 10
             line_width = component.get("line_width", 1)
             draw.line((20, y_offset, CANVAS_WIDTH - 20, y_offset), fill="black", width=line_width)
             y_offset += 10 + line_width
 
-    trimmed = img.crop((0, 0, CANVAS_WIDTH, y_offset + 20))
-    return trimmed
+    # Crop the image to the actual content height
+    final_img = img.crop((0, 0, CANVAS_WIDTH, y_offset + 20))
+
+    _, final_height = final_img.size
+    if final_height > 10000:
+        raise ValueError("Receipt is too long.")
+
+    return final_img
+
+
 
 def print_receipt_image(receipt_image: Image.Image):
     printer.image(receipt_image)
