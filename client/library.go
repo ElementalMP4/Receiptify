@@ -17,8 +17,10 @@ func LibraryUI(w fyne.Window) fyne.CanvasObject {
 		for i, tmpl := range settings.Library {
 			idx := i
 			nameBtn := widget.NewButton(tmpl.Name, func() {
-				// TODO implement auto-load-into-editor
+				// TODO implement build-from-template (with some autofill stuff too? Today's date etc.)
 			})
+			nameBtn.Alignment = widget.ButtonAlignLeading
+
 			deleteBtn := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 				dialog.ShowConfirm("Delete Template", "Are you sure you want to delete this template?", func(confirm bool) {
 					if confirm {
@@ -28,7 +30,8 @@ func LibraryUI(w fyne.Window) fyne.CanvasObject {
 					}
 				}, w)
 			})
-			row := container.NewBorder(nil, nil, nameBtn, deleteBtn)
+
+			row := container.NewBorder(nil, nil, nil, deleteBtn, nameBtn)
 			listContainer.Add(row)
 		}
 		listContainer.Refresh()

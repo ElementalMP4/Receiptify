@@ -162,7 +162,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			return
 		}
 
-		dialog.ShowInformation("Printed", "Receipt sent to printer successfully.", w)
+		dialog.ShowInformation("Printed", "Receipt has been printed!", w)
 	})
 
 	saveToLibraryBtn := widget.NewButton("Save to Library", func() {
@@ -231,22 +231,23 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 				}
 				refreshComponentList()
 			})
-			btn.Importance = widget.HighImportance
-			btn.Resize(fyne.NewSize(320, 40))
+			btn.Importance = widget.MediumImportance
 			templateButtons = append(templateButtons, btn)
 		}
-		dialog.ShowCustom("Load Template", "Close",
-			container.NewVScroll(container.NewVBox(templateButtons...)), w)
+		buttonList := container.NewVBox(templateButtons...)
+		scroll := container.NewVScroll(buttonList)
+		scroll.SetMinSize(fyne.NewSize(250, 5*40)) // 5 buttons, 40px each (approx)
+		dialog.ShowCustom("Load Template", "Close", scroll, w)
 	})
 
-	buttons := container.NewVBox(
-		importBtn,
-		addTextBtn,
-		addDividerBtn,
-		exportBtn,
-		printBtn,
-		saveToLibraryBtn,
-		loadFromLibraryBtn,
+	contentControls := container.NewVBox(MakeHeaderLabel("Content"), addTextBtn, addDividerBtn)
+	flowControls := container.NewVBox(MakeHeaderLabel("Data"), importBtn, exportBtn, printBtn)
+	libraryControls := container.NewVBox(MakeHeaderLabel("Library"), saveToLibraryBtn, loadFromLibraryBtn)
+
+	buttons := container.NewGridWithColumns(3,
+		contentControls,
+		flowControls,
+		libraryControls,
 	)
 
 	return container.NewVBox(
