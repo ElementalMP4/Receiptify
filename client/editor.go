@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -311,6 +312,61 @@ func addComponent(c Component) {
 	componentContainer.Refresh()
 }
 
+func createAlignedText(text string, fontSize int, style fyne.TextStyle, color color.Color, align string) *canvas.Text {
+	txt := canvas.NewText(text, color)
+	txt.TextSize = float32(fontSize)
+	txt.TextStyle = style
+
+	switch align {
+	case "center":
+		txt.Alignment = fyne.TextAlignCenter
+	case "right":
+		txt.Alignment = fyne.TextAlignTrailing
+	default:
+		txt.Alignment = fyne.TextAlignLeading
+	}
+	return txt
+}
+
+func wrapTextLines(text string, fontSize int, width float32, style fyne.TextStyle, color color.Color, align string) fyne.CanvasObject {
+	lines := strings.Split(text, "\n")
+
+	var wrappedLines []fyne.CanvasObject
+	for _, line := range lines {
+		words := strings.Fields(line)
+		if len(words) == 0 {
+			empty := canvas.NewText(" ", color)
+			empty.TextSize = float32(fontSize)
+			empty.TextStyle = style
+			wrappedLines = append(wrappedLines, empty)
+			continue
+		}
+
+		var currentLine string
+		for _, word := range words {
+			testLine := strings.TrimSpace(currentLine + " " + word)
+			txt := canvas.NewText(testLine, color)
+			txt.TextSize = float32(fontSize)
+			txt.TextStyle = style
+			txt.Alignment = fyne.TextAlignLeading
+			txt.Refresh()
+			txt.Resize(fyne.NewSize(width, txt.MinSize().Height))
+
+			if txt.MinSize().Width > width && currentLine != "" {
+				wrappedLines = append(wrappedLines, createAlignedText(currentLine, fontSize, style, color, align))
+				currentLine = word
+			} else {
+				currentLine = testLine
+			}
+		}
+		if currentLine != "" {
+			wrappedLines = append(wrappedLines, createAlignedText(currentLine, fontSize, style, color, align))
+		}
+	}
+
+	return container.NewVBox(wrappedLines...)
+}
+
 func refreshComponentList() {
 	componentContainer.Objects = nil
 	renderedContainer.Objects = nil
@@ -376,20 +432,8 @@ func refreshComponentList() {
 		var preview fyne.CanvasObject
 		switch c.Type {
 		case TextComponent:
-			text := canvas.NewText(c.Content, color.Black)
-			text.TextSize = float32(c.FontSize)
-			text.TextStyle.Bold = c.Bold
-			text.TextStyle.Italic = c.Italic
-
-			switch c.Align {
-			case "center":
-				text.Alignment = fyne.TextAlignCenter
-			case "right":
-				text.Alignment = fyne.TextAlignTrailing
-			default:
-				text.Alignment = fyne.TextAlignLeading
-			}
-			preview = text
+			style := fyne.TextStyle{Bold: c.Bold, Italic: c.Italic}
+			preview = wrapTextLines(c.Content, c.FontSize, 300, style, color.Black, c.Align)
 		case DividerComponent:
 			line := canvas.NewRectangle(color.Black)
 			line.SetMinSize(fyne.NewSize(300, float32(c.LineWidth)))
