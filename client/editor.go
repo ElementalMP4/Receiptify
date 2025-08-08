@@ -39,7 +39,6 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	receiptWrapper := container.NewStack(receiptBorder, componentContainer)
 	receiptWrapper.Resize(fyne.NewSize(300, 400))
 
-	// Wrap rendered preview with border
 	renderBorder := canvas.NewRectangle(color.White)
 	renderBorder.StrokeColor = color.Gray{Y: 100}
 	renderBorder.StrokeWidth = 2
@@ -52,7 +51,6 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	receiptScroll.SetMinSize(fyne.NewSize(320, 400))
 	renderScroll.SetMinSize(fyne.NewSize(320, 400))
 
-	// Final layout with both views side by side
 	receiptBox := container.NewHBox(
 		container.NewVBox(widget.NewLabel("Layout Editor"), receiptScroll),
 		layout.NewSpacer(),
@@ -144,7 +142,6 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			return
 		}
 
-		// Load PrintServerURL from settings
 		printURL := settings.PrintServerURL
 		if printURL == "" {
 			dialog.ShowError(errors.New("print server URL not set"), w)
@@ -167,13 +164,96 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 		dialog.ShowInformation("Printed", "Receipt sent to printer successfully.", w)
 	})
 
+	saveToLibraryBtn := widget.NewButton("Save to Library", func() {
+		nameEntry := widget.NewEntry()
+		nameEntry.SetPlaceHolder("Template name")
+
+		var promptDialog *dialog.ConfirmDialog
+
+		saveFunc := func(name string) {
+			exists := -1
+			for i, t := range settings.Library {
+				if t.Name == name {
+					exists = i
+					break
+				}
+			}
+			saveTemplate := func() {
+				layout := []Component{}
+				for _, c := range components {
+					layout = append(layout, c.Component)
+				}
+				newTemplate := Template{
+					Name:   name,
+					Layout: layout,
+				}
+				if exists >= 0 {
+					settings.Library[exists] = newTemplate
+				} else {
+					settings.Library = append(settings.Library, newTemplate)
+				}
+				saveSettings()
+				dialog.ShowInformation("Saved", "Template saved to library.", w)
+			}
+
+			if exists >= 0 {
+				dialog.ShowConfirm("Overwrite?", "A template with this name already exists. Overwrite?", func(confirm bool) {
+					if confirm {
+						saveTemplate()
+					}
+				}, w)
+			} else {
+				saveTemplate()
+			}
+		}
+
+		promptDialog = dialog.NewCustomConfirm("Save Template", "Save", "Cancel",
+			container.NewVBox(widget.NewLabel("Enter a name for your template:"), nameEntry),
+			func(confirm bool) {
+				if confirm && nameEntry.Text != "" {
+					saveFunc(nameEntry.Text)
+				}
+			}, w)
+		promptDialog.Resize(fyne.NewSize(300, 150))
+		promptDialog.Show()
+	})
+
+	loadFromLibraryBtn := widget.NewButton("Load from Library", func() {
+		var templateButtons []fyne.CanvasObject
+		for _, tmpl := range settings.Library {
+			tmplName := tmpl.Name
+			btn := widget.NewButton(tmplName, func() {
+				components = nil
+				componentContainer.Objects = nil
+				for _, c := range tmpl.Layout {
+					addComponent(c)
+				}
+				refreshComponentList()
+			})
+			btn.Importance = widget.HighImportance
+			btn.Resize(fyne.NewSize(320, 40))
+			templateButtons = append(templateButtons, btn)
+		}
+		dialog.ShowCustom("Load Template", "Close",
+			container.NewVScroll(container.NewVBox(templateButtons...)), w)
+	})
+
+	buttons := container.NewVBox(
+		importBtn,
+		addTextBtn,
+		addDividerBtn,
+		exportBtn,
+		printBtn,
+		saveToLibraryBtn,
+		loadFromLibraryBtn,
+	)
+
 	return container.NewVBox(
 		receiptBox,
-		container.NewHBox(importBtn, addTextBtn, addDividerBtn, exportBtn, printBtn),
+		buttons,
 	)
 }
 
-// Add a new component to the list
 func addComponent(c Component) {
 	var display fyne.CanvasObject
 
@@ -183,7 +263,7 @@ func addComponent(c Component) {
 	case TextComponent:
 		entry := widget.NewEntry()
 		entry.Text = c.Content
-		entry.MultiLine = true // <-- Add this line
+		entry.MultiLine = true
 		entry.Wrapping = fyne.TextWrapWord
 		entry.TextStyle.Bold = c.Bold
 		entry.TextStyle.Italic = c.Italic
@@ -195,22 +275,24 @@ func addComponent(c Component) {
 		display = line
 	}
 
-	// Add move up/down buttons
 	moveUp := widget.NewButtonWithIcon("", theme.MoveUpIcon(), func() {
 		if index > 0 {
 			components[index], components[index-1] = components[index-1], components[index]
 			refreshComponentList()
 		}
 	})
+
 	moveDown := widget.NewButtonWithIcon("", theme.MoveDownIcon(), func() {
 		if index < len(components)-1 {
 			components[index], components[index+1] = components[index+1], components[index]
 			refreshComponentList()
 		}
 	})
+
 	editBtn := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
 		showEditDialog(c, &components[index])
 	})
+
 	deleteBtn := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 		if index >= 0 && index < len(components) {
 			components = append(components[:index], components[index+1:]...)
@@ -229,7 +311,6 @@ func addComponent(c Component) {
 	componentContainer.Refresh()
 }
 
-// Refresh the visual list of components
 func refreshComponentList() {
 	componentContainer.Objects = nil
 	renderedContainer.Objects = nil
@@ -237,7 +318,6 @@ func refreshComponentList() {
 	for i := range components {
 		c := components[i].Component
 
-		// --- Editor View ---
 		var editorWidget fyne.CanvasObject
 		switch c.Type {
 		case TextComponent:
@@ -265,15 +345,18 @@ func refreshComponentList() {
 				refreshComponentList()
 			}
 		})
+
 		moveDown := widget.NewButtonWithIcon("", theme.MoveDownIcon(), func() {
 			if i < len(components)-1 {
 				components[i], components[i+1] = components[i+1], components[i]
 				refreshComponentList()
 			}
 		})
+
 		editBtn := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
 			showEditDialog(c, &components[i])
 		})
+
 		deleteBtn := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			if i >= 0 && i < len(components) {
 				components = append(components[:i], components[i+1:]...)
@@ -281,7 +364,6 @@ func refreshComponentList() {
 			}
 		})
 
-		// Add padding around the row
 		row := container.NewPadded(
 			container.NewBorder(nil, nil, moveUp, moveDown,
 				container.NewBorder(nil, nil, nil, container.NewHBox(editBtn, deleteBtn), editorWidget),
@@ -291,7 +373,6 @@ func refreshComponentList() {
 		components[i].Widget = row
 		componentContainer.Add(row)
 
-		// --- Render Preview ---
 		var preview fyne.CanvasObject
 		switch c.Type {
 		case TextComponent:
@@ -321,10 +402,9 @@ func refreshComponentList() {
 	renderedContainer.Refresh()
 }
 
-// Edit a component (properties)
 func showEditDialog(c Component, wrapper *ComponentWidget) {
 	form := &widget.Form{}
-	updated := c // work on a copy
+	updated := c
 
 	var content fyne.CanvasObject
 	var editDialog *dialog.CustomDialog

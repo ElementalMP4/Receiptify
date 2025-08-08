@@ -20,15 +20,15 @@ func main() {
 	w.ShowAndRun()
 }
 
-// Helper to return the main app content (your navigation etc.)
 func mainAppContent(w fyne.Window) fyne.CanvasObject {
 	content := container.NewStack()
-	var btnEditor, btnSettings *widget.Button
+	var btnEditor, btnSettings, btnLibrary *widget.Button
 	var navButtons *fyne.Container
 
 	setActive := func(active string) {
 		btnEditor.Importance = widget.MediumImportance
 		btnSettings.Importance = widget.MediumImportance
+		btnLibrary.Importance = widget.MediumImportance
 
 		switch active {
 		case "editor":
@@ -37,6 +37,9 @@ func mainAppContent(w fyne.Window) fyne.CanvasObject {
 		case "settings":
 			btnSettings.Importance = widget.HighImportance
 			content.Objects = []fyne.CanvasObject{SettingsUI(w)}
+		case "library":
+			btnLibrary.Importance = widget.HighImportance
+			content.Objects = []fyne.CanvasObject{LibraryUI(w)}
 		}
 		content.Refresh()
 		navButtons.Refresh()
@@ -44,10 +47,12 @@ func mainAppContent(w fyne.Window) fyne.CanvasObject {
 
 	btnEditor = widget.NewButtonWithIcon("Editor", theme.DocumentCreateIcon(), func() { setActive("editor") })
 	btnSettings = widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() { setActive("settings") })
+	btnLibrary = widget.NewButtonWithIcon("Library", theme.FolderOpenIcon(), func() { setActive("library") })
 
 	navButtons = container.NewVBox(
 		MakeHeaderLabel("Receiptify"),
 		btnEditor,
+		btnLibrary,
 		btnSettings,
 		layout.NewSpacer(),
 	)

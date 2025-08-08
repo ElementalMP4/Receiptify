@@ -10,10 +10,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-type AppSettings struct {
-	PrintServerURL string `json:"print_server_url"`
-}
-
 var settingsFile = "settings.json"
 var settings AppSettings
 
