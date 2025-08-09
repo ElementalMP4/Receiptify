@@ -134,7 +134,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			export = append(export, c.Component)
 		}
 
-		err := SendToPrinter(export)
+		err := SendToPrinter(export, settings.PrintServerURL)
 
 		if err != nil {
 			dialog.ShowError(err, w)

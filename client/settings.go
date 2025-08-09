@@ -12,6 +12,25 @@ import (
 
 var settingsFile = "settings.json"
 var settings AppSettings
+var testPrint = []Component{
+	Component{
+		Type:     TextComponent,
+		Content:  "Hello World!",
+		Bold:     true,
+		FontSize: 32,
+		Align:    "center",
+	},
+	Component{
+		Type:      DividerComponent,
+		LineWidth: 5,
+	},
+	Component{
+		Type:     TextComponent,
+		Content:  "Does this thing even work?",
+		Italic:   true,
+		FontSize: 14,
+	},
+}
 
 func loadSettings() {
 	data, err := os.ReadFile(settingsFile)
@@ -35,10 +54,22 @@ func SettingsUI(w fyne.Window) fyne.CanvasObject {
 		dialog.ShowInformation("Saved", "Settings saved!", w)
 	})
 
+	testPrinterBtn := widget.NewButton("Send Test Print", func() {
+		urlToTest := urlEntry.Text
+		err := SendToPrinter(testPrint, urlToTest)
+		if err != nil {
+			dialog.ShowError(err, w)
+		} else {
+			dialog.ShowInformation("Printed", "Test print was successful!", w)
+		}
+	})
+
 	return container.NewVBox(
 		widget.NewLabelWithStyle("Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewForm(widget.NewFormItem("Print Server URL",
-			urlEntry)),
+		widget.NewForm(
+			widget.NewFormItem("Print Server URL", urlEntry),
+			widget.NewFormItem("Test", testPrinterBtn),
+		),
 		saveBtn,
 	)
 }

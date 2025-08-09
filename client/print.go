@@ -8,18 +8,17 @@ import (
 	"net/http"
 )
 
-func SendToPrinter(export []Component) error {
+func SendToPrinter(export []Component, url string) error {
 	j, err := json.MarshalIndent(export, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	printURL := settings.PrintServerURL
-	if printURL == "" {
+	if url == "" {
 		return fmt.Errorf("print server URL not set")
 	}
 
-	resp, err := http.Post(printURL+"/print-receipt", "application/json", bytes.NewBuffer(j))
+	resp, err := http.Post(url+"/print-receipt", "application/json", bytes.NewBuffer(j))
 	if err != nil {
 		return err
 	}
