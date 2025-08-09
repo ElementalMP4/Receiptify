@@ -252,10 +252,6 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 }
 
 func addComponent(c Component) {
-	var display fyne.CanvasObject
-
-	index := len(components)
-
 	switch c.Type {
 	case TextComponent:
 		entry := widget.NewEntry()
@@ -265,47 +261,14 @@ func addComponent(c Component) {
 		entry.TextStyle.Bold = c.Bold
 		entry.TextStyle.Italic = c.Italic
 		entry.Resize(fyne.NewSize(300, 30))
-		display = entry
 	case DividerComponent:
 		line := canvas.NewRectangle(color.Black)
 		line.SetMinSize(fyne.NewSize(300, float32(c.LineWidth)))
-		display = line
 	}
-
-	moveUp := widget.NewButtonWithIcon("", theme.MoveUpIcon(), func() {
-		if index > 0 {
-			components[index], components[index-1] = components[index-1], components[index]
-			refreshComponentList()
-		}
-	})
-
-	moveDown := widget.NewButtonWithIcon("", theme.MoveDownIcon(), func() {
-		if index < len(components)-1 {
-			components[index], components[index+1] = components[index+1], components[index]
-			refreshComponentList()
-		}
-	})
-
-	editBtn := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
-		showEditDialog(c, &components[index])
-	})
-
-	deleteBtn := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
-		if index >= 0 && index < len(components) {
-			components = append(components[:index], components[index+1:]...)
-			refreshComponentList()
-		}
-	})
-
-	row := container.NewBorder(nil, nil, moveUp, moveDown,
-		container.NewBorder(nil, nil, nil, container.NewHBox(editBtn, deleteBtn), display),
-	)
 
 	wrapper := ComponentWidget{Component: c}
 	components = append(components, wrapper)
-	componentContainer.Add(row)
 	refreshComponentList()
-	componentContainer.Refresh()
 }
 
 func createAlignedText(text string, fontSize int, style fyne.TextStyle, color color.Color, align string) *canvas.Text {
