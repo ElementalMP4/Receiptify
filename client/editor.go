@@ -1,13 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"image/color"
-	"io"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -139,32 +134,13 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			export = append(export, c.Component)
 		}
 
-		j, err := json.MarshalIndent(export, "", "  ")
+		err := SendToPrinter(export)
+
 		if err != nil {
 			dialog.ShowError(err, w)
-			return
+		} else {
+			dialog.ShowInformation("Printed", "Receipt has been printed!", w)
 		}
-
-		printURL := settings.PrintServerURL
-		if printURL == "" {
-			dialog.ShowError(errors.New("print server URL not set"), w)
-			return
-		}
-
-		resp, err := http.Post(printURL+"/print-receipt", "application/json", bytes.NewBuffer(j))
-		if err != nil {
-			dialog.ShowError(err, w)
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != 200 {
-			body, _ := io.ReadAll(resp.Body)
-			dialog.ShowError(fmt.Errorf("print failed: %s", string(body)), w)
-			return
-		}
-
-		dialog.ShowInformation("Printed", "Receipt has been printed!", w)
 	})
 
 	saveToLibraryBtn := widget.NewButton("Save to Library", func() {
@@ -242,7 +218,12 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 		dialog.ShowCustom("Load Template", "Close", scroll, w)
 	})
 
-	contentControls := container.NewVBox(MakeHeaderLabel("Content"), addTextBtn, addDividerBtn)
+	clearBtn := widget.NewButton("Clear", func() {
+		components = []ComponentWidget{}
+		refreshComponentList()
+	})
+
+	contentControls := container.NewVBox(MakeHeaderLabel("Content"), addTextBtn, addDividerBtn, clearBtn)
 	flowControls := container.NewVBox(MakeHeaderLabel("Data"), importBtn, exportBtn, printBtn)
 	libraryControls := container.NewVBox(MakeHeaderLabel("Library"), saveToLibraryBtn, loadFromLibraryBtn)
 
@@ -251,6 +232,8 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 		flowControls,
 		libraryControls,
 	)
+
+	refreshComponentList()
 
 	return container.NewVBox(
 		receiptBox,

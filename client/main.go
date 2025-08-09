@@ -22,13 +22,14 @@ func main() {
 
 func mainAppContent(w fyne.Window) fyne.CanvasObject {
 	content := container.NewStack()
-	var btnEditor, btnSettings, btnLibrary *widget.Button
+	var btnEditor, btnSettings, btnLibrary, btnCreate *widget.Button
 	var navButtons *fyne.Container
 
 	setActive := func(active string) {
 		btnEditor.Importance = widget.MediumImportance
 		btnSettings.Importance = widget.MediumImportance
 		btnLibrary.Importance = widget.MediumImportance
+		btnCreate.Importance = widget.MediumImportance
 
 		switch active {
 		case "editor":
@@ -40,6 +41,9 @@ func mainAppContent(w fyne.Window) fyne.CanvasObject {
 		case "library":
 			btnLibrary.Importance = widget.HighImportance
 			content.Objects = []fyne.CanvasObject{LibraryUI(w)}
+		case "create":
+			btnCreate.Importance = widget.HighImportance
+			content.Objects = []fyne.CanvasObject{CreateUI(w)}
 		}
 		content.Refresh()
 		navButtons.Refresh()
@@ -47,11 +51,13 @@ func mainAppContent(w fyne.Window) fyne.CanvasObject {
 
 	btnEditor = widget.NewButtonWithIcon("Template Builder", theme.DocumentCreateIcon(), func() { setActive("editor") })
 	btnSettings = widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() { setActive("settings") })
-	btnLibrary = widget.NewButtonWithIcon("Library", theme.FolderOpenIcon(), func() { setActive("library") })
+	btnLibrary = widget.NewButtonWithIcon("Template Library", theme.FolderOpenIcon(), func() { setActive("library") })
+	btnCreate = widget.NewButtonWithIcon("Create Receipt", theme.ContentAddIcon(), func() { setActive("create") })
 
 	navButtons = container.NewVBox(
 		MakeHeaderLabel("Receiptify"),
 		btnEditor,
+		btnCreate,
 		btnLibrary,
 		btnSettings,
 		layout.NewSpacer(),
