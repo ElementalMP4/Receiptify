@@ -13,18 +13,18 @@ import (
 var settingsFile = "settings.json"
 var settings AppSettings
 var testPrint = []Component{
-	Component{
+	{
 		Type:     TextComponent,
 		Content:  "Hello World!",
 		Bold:     true,
 		FontSize: 32,
 		Align:    "center",
 	},
-	Component{
+	{
 		Type:      DividerComponent,
 		LineWidth: 5,
 	},
-	Component{
+	{
 		Type:     TextComponent,
 		Content:  "Does this thing even work?",
 		Italic:   true,
