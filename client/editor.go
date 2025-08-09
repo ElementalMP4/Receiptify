@@ -43,7 +43,9 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	renderBorder := canvas.NewRectangle(color.White)
 	renderBorder.StrokeColor = color.Gray{Y: 100}
 	renderBorder.StrokeWidth = 2
-	renderWrapper := container.NewStack(renderBorder, renderedContainer)
+
+	paddedContainer := container.NewPadded(renderedContainer)
+	renderWrapper := container.NewStack(renderBorder, paddedContainer)
 	renderWrapper.Resize(fyne.NewSize(300, 400))
 
 	receiptScroll := container.NewVScroll(receiptWrapper)

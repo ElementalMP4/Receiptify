@@ -45,7 +45,7 @@ func mainAppContent(w fyne.Window) fyne.CanvasObject {
 		navButtons.Refresh()
 	}
 
-	btnEditor = widget.NewButtonWithIcon("Editor", theme.DocumentCreateIcon(), func() { setActive("editor") })
+	btnEditor = widget.NewButtonWithIcon("Template Builder", theme.DocumentCreateIcon(), func() { setActive("editor") })
 	btnSettings = widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), func() { setActive("settings") })
 	btnLibrary = widget.NewButtonWithIcon("Library", theme.FolderOpenIcon(), func() { setActive("library") })
 
