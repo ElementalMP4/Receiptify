@@ -65,7 +65,7 @@ func SettingsUI(w fyne.Window) fyne.CanvasObject {
 	})
 
 	return container.NewVBox(
-		widget.NewLabelWithStyle("Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		MakeHeaderLabel("Settings"),
 		widget.NewForm(
 			widget.NewFormItem("Print Server URL", urlEntry),
 			widget.NewFormItem("Test", testPrinterBtn),

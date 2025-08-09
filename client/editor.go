@@ -25,6 +25,13 @@ var components []ComponentWidget
 var componentContainer *fyne.Container
 var renderedContainer *fyne.Container
 
+func LoadTemplateIntoEditor(tmpl []Component) {
+	components = []ComponentWidget{}
+	for _, comp := range tmpl {
+		addComponent(comp)
+	}
+}
+
 func EditorUI(w fyne.Window) fyne.CanvasObject {
 	componentContainer = container.NewVBox()
 	renderedContainer = container.NewVBox()
@@ -58,6 +65,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	addTextBtn := widget.NewButton("Add Text", func() {
 		c := Component{
 			Type:     TextComponent,
+			Name:     "Text Component",
 			Content:  "Editable text here",
 			FontSize: 14,
 		}
@@ -67,6 +75,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	addDividerBtn := widget.NewButton("Add Divider", func() {
 		c := Component{
 			Type:      DividerComponent,
+			Name:      "Divider",
 			LineWidth: 2,
 		}
 		addComponent(c)
@@ -214,7 +223,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 		}
 		buttonList := container.NewVBox(templateButtons...)
 		scroll := container.NewVScroll(buttonList)
-		scroll.SetMinSize(fyne.NewSize(250, 5*40)) // 5 buttons, 40px each (approx)
+		scroll.SetMinSize(fyne.NewSize(250, 5*40))
 		dialog.ShowCustom("Load Template", "Close", scroll, w)
 	})
 
@@ -236,6 +245,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	refreshComponentList()
 
 	return container.NewVBox(
+		MakeHeaderLabel("Template Builder"),
 		receiptBox,
 		buttons,
 	)
@@ -444,6 +454,9 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 		textEntry := widget.NewEntry()
 		textEntry.SetText(c.Content)
 
+		nameEntry := widget.NewEntry()
+		nameEntry.SetText(c.Name)
+
 		fontSize := widget.NewEntry()
 		fontSize.SetText(strconv.Itoa(c.FontSize))
 
@@ -461,6 +474,7 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 		form.Append("Alignment", alignSelect)
 
 		form.Append("Text", textEntry)
+		form.Append("Name", nameEntry)
 		form.Append("Font Size", fontSize)
 		form.Append("", bold)
 		form.Append("", italic)
@@ -472,6 +486,7 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 				fs = 14
 			}
 			updated.Content = textEntry.Text
+			updated.Name = nameEntry.Text
 			updated.FontSize = fs
 			updated.Bold = bold.Checked
 			updated.Italic = italic.Checked
@@ -485,16 +500,24 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 
 		content = container.NewVBox(form, saveBtn)
 	case DividerComponent:
+
 		lineWidth := widget.NewEntry()
 		lineWidth.SetText(strconv.Itoa(c.LineWidth))
+
+		nameEntry := widget.NewEntry()
+		nameEntry.SetText(c.Name)
+
 		form.Append("Line Width", lineWidth)
+		form.Append("Name", nameEntry)
 
 		saveBtn := widget.NewButton("Save", func() {
 			lw, err := strconv.Atoi(lineWidth.Text)
 			if err != nil {
 				lw = 1
 			}
+
 			updated.LineWidth = lw
+			updated.Name = nameEntry.Text
 
 			*wrapper = ComponentWidget{Component: updated}
 			refreshComponentList()

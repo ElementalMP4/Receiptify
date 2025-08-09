@@ -4,6 +4,7 @@ import "fyne.io/fyne/v2"
 
 type Component struct {
 	Type      ComponentType `json:"type"`
+	Name      string        `json:"name"`
 	Content   string        `json:"content,omitempty"`
 	Bold      bool          `json:"bold,omitempty"`
 	Italic    bool          `json:"italic,omitempty"`

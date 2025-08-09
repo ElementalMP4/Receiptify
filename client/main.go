@@ -9,6 +9,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+var setActive func(string)
+
 func main() {
 	a := app.NewWithID("Receiptify")
 	w := a.NewWindow("Receiptify")
@@ -25,7 +27,7 @@ func mainAppContent(w fyne.Window) fyne.CanvasObject {
 	var btnEditor, btnSettings, btnLibrary, btnCreate *widget.Button
 	var navButtons *fyne.Container
 
-	setActive := func(active string) {
+	setActive = func(active string) {
 		btnEditor.Importance = widget.MediumImportance
 		btnSettings.Importance = widget.MediumImportance
 		btnLibrary.Importance = widget.MediumImportance

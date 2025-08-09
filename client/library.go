@@ -17,7 +17,23 @@ func LibraryUI(w fyne.Window) fyne.CanvasObject {
 		for i, tmpl := range settings.Library {
 			idx := i
 			nameBtn := widget.NewButton(tmpl.Name, func() {
-				// TODO implement build-from-template (with some autofill stuff too? Today's date etc.)
+				var howDoWeOpen *dialog.CustomDialog
+				howDoWeOpen = dialog.NewCustom("Open Template", "Cancel",
+					container.NewVBox(
+						widget.NewLabel("How would you like to open this template?"),
+						widget.NewButton("Open in Template Builder", func() {
+							setActive("editor")
+							LoadTemplateIntoEditor(tmpl.Layout)
+							howDoWeOpen.Dismiss()
+						}),
+						widget.NewButton("Open in Receipt Creator", func() {
+							setActive("create")
+							LoadTemplateIntoCreator(tmpl.Layout)
+							howDoWeOpen.Dismiss()
+						}),
+					), w,
+				)
+				howDoWeOpen.Show()
 			})
 			nameBtn.Alignment = widget.ButtonAlignLeading
 
@@ -40,7 +56,7 @@ func LibraryUI(w fyne.Window) fyne.CanvasObject {
 	refreshList()
 
 	return container.NewVBox(
-		widget.NewLabelWithStyle("Template Library", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		MakeHeaderLabel("Template Library"),
 		listContainer,
 	)
 }
