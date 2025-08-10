@@ -1,0 +1,19 @@
+{
+  "name": "receiptify",
+  "version": "1.0.0",
+  "install_path": "/opt/receiptify",
+  "files": [
+    "*.py",
+    "requirements.txt"
+  ],
+  "dependencies": [
+    "python3",
+    "python3-venv",
+    "python3-pip",
+    "systemd"
+  ],
+  "run_command": "/opt/receiptify/venv/bin/python /opt/receiptify/print-server.py",
+  "service_user": "receiptify",
+  "maintainer": "ElementalMP4",
+  "postinst_script": ".qp/postinst.sh"
+}
