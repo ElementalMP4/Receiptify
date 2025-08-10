@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -59,11 +60,22 @@ func ensureConfigFileExists(path string) error {
 			return err
 		}
 	}
+
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		emptySettings := AppSettings{}
-		data, _ := json.MarshalIndent(emptySettings, "", "  ")
+		baseDir := strings.TrimSuffix(path, string(filepath.Separator)+"settings.json")
+		pluginDir := filepath.Join(baseDir, "plugins")
+
+		emptySettings := AppSettings{
+			PluginPath: pluginDir,
+		}
+
+		data, err := json.MarshalIndent(emptySettings, "", "  ")
+		if err != nil {
+			return err
+		}
 		return os.WriteFile(path, data, 0644)
 	}
+
 	return nil
 }
 
