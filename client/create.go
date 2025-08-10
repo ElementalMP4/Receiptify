@@ -14,10 +14,12 @@ import (
 
 var creatorComponents []Component
 var creatorContainer *fyne.Container
+var currentCreatorTemplate string
 
-func LoadTemplateIntoCreator(tmpl []Component) {
-	creatorComponents = make([]Component, len(tmpl))
-	copy(creatorComponents, tmpl)
+func LoadTemplateIntoCreator(tmpl Template) {
+	currentCreatorTemplate = tmpl.Name
+	creatorComponents = make([]Component, len(tmpl.Layout))
+	copy(creatorComponents, tmpl.Layout)
 	creatorContainer.Objects = nil
 
 	for i, c := range creatorComponents {
@@ -50,14 +52,42 @@ func LoadTemplateIntoCreator(tmpl []Component) {
 func CreateUI(w fyne.Window) fyne.CanvasObject {
 	creatorContainer = container.NewVBox(widget.NewLabel("No template loaded."))
 
-	loadBtn := widget.NewButton("Load Template", func() {
+	// Label to show the current template name
+	templateNameLabel := widget.NewLabel("")
+	updateTemplateNameLabel := func() {
+		if currentCreatorTemplate != "" {
+			templateNameLabel.SetText("Template: " + currentCreatorTemplate)
+		} else {
+			templateNameLabel.SetText("No template loaded")
+		}
+	}
+	updateTemplateNameLabel()
+
+	loadFromLibraryBtn := widget.NewButton("Load from Library", func() {
+		var templateButtons []fyne.CanvasObject
+		for _, tmpl := range settings.Library {
+			tmplName := tmpl.Name
+			btn := widget.NewButton(tmplName, func() {
+				LoadTemplateIntoCreator(tmpl)
+				updateTemplateNameLabel()
+			})
+			btn.Importance = widget.MediumImportance
+			templateButtons = append(templateButtons, btn)
+		}
+		buttonList := container.NewVBox(templateButtons...)
+		scroll := container.NewVScroll(buttonList)
+		scroll.SetMinSize(fyne.NewSize(250, 5*40))
+		dialog.ShowCustom("Load Template", "Close", scroll, w)
+	})
+
+	loadBtn := widget.NewButton("Load From JSON", func() {
 		fd := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil || reader == nil {
 				return
 			}
 			defer reader.Close()
 
-			var imported []Component
+			var imported Template
 			jsonParser := json.NewDecoder(reader)
 			if err := jsonParser.Decode(&imported); err != nil {
 				dialog.ShowError(err, w)
@@ -65,6 +95,7 @@ func CreateUI(w fyne.Window) fyne.CanvasObject {
 			}
 
 			LoadTemplateIntoCreator(imported)
+			updateTemplateNameLabel()
 		}, w)
 		fd.SetFilter(storage.NewExtensionFileFilter([]string{".json"}))
 		fd.Show()
@@ -80,7 +111,11 @@ func CreateUI(w fyne.Window) fyne.CanvasObject {
 				return
 			}
 			defer writer.Close()
-			j, err := json.MarshalIndent(creatorComponents, "", "  ")
+			export := Template{
+				Name:   currentCreatorTemplate,
+				Layout: creatorComponents,
+			}
+			j, err := json.MarshalIndent(export, "", "  ")
 			if err != nil {
 				dialog.ShowError(err, w)
 				return
@@ -93,6 +128,7 @@ func CreateUI(w fyne.Window) fyne.CanvasObject {
 			dialog.ShowInformation("Success", "JSON exported successfully.", w)
 		}, w)
 		fd.SetFilter(storage.NewExtensionFileFilter([]string{".json"}))
+		fd.SetFileName(currentCreatorTemplate + ".json")
 		fd.Show()
 	})
 
@@ -108,13 +144,16 @@ func CreateUI(w fyne.Window) fyne.CanvasObject {
 			dialog.ShowInformation("Printed", "Receipt has been printed!", w)
 		}
 	})
+	printBtn.Importance = widget.HighImportance
 
-	buttons := container.NewHBox(loadBtn, exportBtn, printBtn)
+	buttons := container.NewHBox(loadFromLibraryBtn, loadBtn, exportBtn)
 
 	return container.NewVBox(
 		MakeHeaderLabel("Receipt Creator"),
+		templateNameLabel, // Show template name below the header
 		buttons,
 		widget.NewSeparator(),
 		creatorContainer,
+		container.NewVBox(printBtn),
 	)
 }

@@ -23,12 +23,12 @@ func LibraryUI(w fyne.Window) fyne.CanvasObject {
 						widget.NewLabel("How would you like to open this template?"),
 						widget.NewButton("Open in Template Builder", func() {
 							setActive("editor")
-							LoadTemplateIntoEditor(tmpl.Layout)
+							LoadTemplateIntoEditor(tmpl)
 							howDoWeOpen.Dismiss()
 						}),
 						widget.NewButton("Open in Receipt Creator", func() {
 							setActive("create")
-							LoadTemplateIntoCreator(tmpl.Layout)
+							LoadTemplateIntoCreator(tmpl)
 							howDoWeOpen.Dismiss()
 						}),
 					), w,

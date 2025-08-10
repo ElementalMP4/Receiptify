@@ -25,9 +25,12 @@ var components []ComponentWidget
 var componentContainer *fyne.Container
 var renderedContainer *fyne.Container
 
-func LoadTemplateIntoEditor(tmpl []Component) {
+var currentTemplateName string
+
+func LoadTemplateIntoEditor(tmpl Template) {
 	components = []ComponentWidget{}
-	for _, comp := range tmpl {
+	currentTemplateName = tmpl.Name
+	for _, comp := range tmpl.Layout {
 		addComponent(comp)
 	}
 }
@@ -35,6 +38,14 @@ func LoadTemplateIntoEditor(tmpl []Component) {
 func EditorUI(w fyne.Window) fyne.CanvasObject {
 	componentContainer = container.NewVBox()
 	renderedContainer = container.NewVBox()
+
+	// Template name entry at the top
+	nameEntry := widget.NewEntry()
+	nameEntry.SetPlaceHolder("Template name")
+	nameEntry.SetText(currentTemplateName)
+	nameEntry.OnChanged = func(s string) {
+		currentTemplateName = s
+	}
 
 	receiptBorder := canvas.NewRectangle(color.White)
 	receiptBorder.StrokeColor = color.Gray{Y: 100}
@@ -82,16 +93,22 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	})
 
 	exportBtn := widget.NewButton("Export JSON", func() {
+		// Use the value from the nameEntry as the template name
+		if strings.TrimSpace(nameEntry.Text) == "" {
+			dialog.ShowInformation("Missing Name", "Please enter a template name before exporting.", w)
+			return
+		}
+		currentTemplateName = nameEntry.Text
+		export := Template{Name: currentTemplateName}
+		for _, c := range components {
+			export.Layout = append(export.Layout, c.Component)
+		}
+
 		fd := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 			if err != nil || writer == nil {
 				return
 			}
 			defer writer.Close()
-
-			export := []Component{}
-			for _, c := range components {
-				export = append(export, c.Component)
-			}
 
 			j, err := json.MarshalIndent(export, "", "  ")
 			if err != nil {
@@ -108,6 +125,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			dialog.ShowInformation("Success", "JSON exported successfully.", w)
 		}, w)
 		fd.SetFilter(storage.NewExtensionFileFilter([]string{".json"}))
+		fd.SetFileName(currentTemplateName + ".json")
 		fd.Show()
 	})
 
@@ -118,7 +136,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			}
 			defer reader.Close()
 
-			var imported []Component
+			var imported Template
 			jsonParser := json.NewDecoder(reader)
 			if err := jsonParser.Decode(&imported); err != nil {
 				dialog.ShowError(err, w)
@@ -128,7 +146,9 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			components = nil
 			componentContainer.Objects = nil
 
-			for _, c := range imported {
+			currentTemplateName = imported.Name
+			nameEntry.SetText(imported.Name) // Update the name entry field
+			for _, c := range imported.Layout {
 				addComponent(c)
 			}
 			refreshComponentList()
@@ -153,69 +173,60 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	})
 
 	saveToLibraryBtn := widget.NewButton("Save to Library", func() {
-		nameEntry := widget.NewEntry()
-		nameEntry.SetPlaceHolder("Template name")
+		// Use the value from the nameEntry as the template name
+		if strings.TrimSpace(nameEntry.Text) == "" {
+			dialog.ShowInformation("Missing Name", "Please enter a template name before saving.", w)
+			return
+		}
+		currentTemplateName = nameEntry.Text
 
-		var promptDialog *dialog.ConfirmDialog
-
-		saveFunc := func(name string) {
-			exists := -1
-			for i, t := range settings.Library {
-				if t.Name == name {
-					exists = i
-					break
-				}
-			}
-			saveTemplate := func() {
-				layout := []Component{}
-				for _, c := range components {
-					layout = append(layout, c.Component)
-				}
-				newTemplate := Template{
-					Name:   name,
-					Layout: layout,
-				}
-				if exists >= 0 {
-					settings.Library[exists] = newTemplate
-				} else {
-					settings.Library = append(settings.Library, newTemplate)
-				}
-				saveSettings()
-				dialog.ShowInformation("Saved", "Template saved to library.", w)
-			}
-
-			if exists >= 0 {
-				dialog.ShowConfirm("Overwrite?", "A template with this name already exists. Overwrite?", func(confirm bool) {
-					if confirm {
-						saveTemplate()
-					}
-				}, w)
-			} else {
-				saveTemplate()
+		exists := -1
+		for i, t := range settings.Library {
+			if t.Name == currentTemplateName {
+				exists = i
+				break
 			}
 		}
+		saveTemplate := func() {
+			layout := []Component{}
+			for _, c := range components {
+				layout = append(layout, c.Component)
+			}
+			newTemplate := Template{
+				Name:   currentTemplateName,
+				Layout: layout,
+			}
+			if exists >= 0 {
+				settings.Library[exists] = newTemplate
+			} else {
+				settings.Library = append(settings.Library, newTemplate)
+			}
+			saveSettings()
+			dialog.ShowInformation("Saved", "Template saved to library.", w)
+		}
 
-		promptDialog = dialog.NewCustomConfirm("Save Template", "Save", "Cancel",
-			container.NewVBox(widget.NewLabel("Enter a name for your template:"), nameEntry),
-			func(confirm bool) {
-				if confirm && nameEntry.Text != "" {
-					saveFunc(nameEntry.Text)
+		if exists >= 0 {
+			dialog.ShowConfirm("Overwrite?", "A template with this name already exists. Overwrite?", func(confirm bool) {
+				if confirm {
+					saveTemplate()
 				}
 			}, w)
-		promptDialog.Resize(fyne.NewSize(300, 150))
-		promptDialog.Show()
+		} else {
+			saveTemplate()
+		}
 	})
 
 	loadFromLibraryBtn := widget.NewButton("Load from Library", func() {
 		var templateButtons []fyne.CanvasObject
 		for _, tmpl := range settings.Library {
-			tmplName := tmpl.Name
-			btn := widget.NewButton(tmplName, func() {
+			btn := widget.NewButton(tmpl.Name, func() {
 				components = nil
 				componentContainer.Objects = nil
 				for _, c := range tmpl.Layout {
 					addComponent(c)
 				}
+				currentTemplateName = tmpl.Name
+				nameEntry.SetText(tmpl.Name) // Update the name entry field
 				refreshComponentList()
 			})
 			btn.Importance = widget.MediumImportance
@@ -229,6 +240,8 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 
 	clearBtn := widget.NewButton("Clear", func() {
 		components = []ComponentWidget{}
+		nameEntry.SetText("")
+		currentTemplateName = ""
 		refreshComponentList()
 	})
 
@@ -246,6 +259,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 
 	return container.NewVBox(
 		MakeHeaderLabel("Template Builder"),
+		nameEntry, // Template name entry just below the header
 		receiptBox,
 		buttons,
 	)
