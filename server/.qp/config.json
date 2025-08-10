@@ -1,19 +1,28 @@
 {
-  "name": "receiptify",
-  "version": "1.0.0",
-  "install_path": "/opt/receiptify",
-  "files": [
-    "*.py",
+  "app_name": "receiptify",
+  "build_files": [
+    "print-server.py",
     "requirements.txt"
   ],
-  "dependencies": [
-    "python3",
-    "python3-venv",
-    "python3-pip",
-    "systemd"
+  "install_files": [
+    {
+      "file": "print-server.py",
+      "from": "cwd"
+    },
+    {
+      "file": "trim-tool.py",
+      "from": "cwd"
+    },
+    {
+      "file": "requirements.txt",
+      "from": "cwd"
+    },
+    {
+      "file": "venv",
+      "from": "build"
+    }
   ],
-  "run_command": "/opt/receiptify/venv/bin/python /opt/receiptify/print-server.py",
-  "service_user": "receiptify",
-  "maintainer": "ElementalMP4",
-  "postinst_script": ".qp/postinst.sh"
+  "build_script": "scripts/build.sh",
+  "systemd": true,
+  "exec": "/opt/qp_apps/receiptify/venv/bin/python /opt/qp_apps/receiptify/print-server.py"
 }
