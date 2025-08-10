@@ -1,0 +1,11 @@
+{
+  "name": "Greet",
+  "version": "1.0.0",
+  "functions": [
+    {
+      "name": "greet",
+      "params": ["string"],
+      "returns": ["string"]
+    }
+  ]
+}

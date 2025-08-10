@@ -41,7 +41,7 @@ func LibraryUI(w fyne.Window) fyne.CanvasObject {
 				dialog.ShowConfirm("Delete Template", "Are you sure you want to delete this template?", func(confirm bool) {
 					if confirm {
 						settings.Library = append(settings.Library[:idx], settings.Library[idx+1:]...)
-						saveSettings()
+						SaveSettings(false, w)
 						refreshList()
 					}
 				}, w)

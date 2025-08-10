@@ -214,7 +214,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			} else {
 				settings.Library = append(settings.Library, newTemplate)
 			}
-			saveSettings()
+			SaveSettings(false, w)
 			dialog.ShowInformation("Saved", "Template saved to library.", w)
 		}
 

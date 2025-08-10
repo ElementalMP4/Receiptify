@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -16,10 +18,19 @@ func main() {
 	w := a.NewWindow("Receiptify")
 	w.Resize(fyne.NewSize(900, 700))
 
-	loadSettings()
+	LoadSettings()
+
+	err := ConfigureLuaAndLoadPlugins()
+	if err != nil && err.Error() != "plugin path not set" {
+		log.Fatalf("An error occurred whilst loading plugins: %v", err)
+	}
 
 	w.SetContent(mainAppContent(w))
 	w.ShowAndRun()
+
+	if luaVm != nil && !luaVm.Dead {
+		luaVm.Close()
+	}
 }
 
 func mainAppContent(w fyne.Window) fyne.CanvasObject {

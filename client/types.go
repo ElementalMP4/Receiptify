@@ -29,7 +29,20 @@ type Template struct {
 
 type AppSettings struct {
 	PrintServerURL string     `json:"print_server_url"`
+	PluginPath     string     `json:"plugins"`
 	Library        []Template `json:"library"`
+}
+
+type PluginManifest struct {
+	PluginName string         `json:"name"`
+	Version    string         `json:"version"`
+	Functions  []FunctionInfo `json:"functions"`
+}
+
+type FunctionInfo struct {
+	Name    string   `json:"name"`
+	Params  []string `json:"params"`
+	Returns []string `json:"returns"`
 }
 
 type ComponentType string

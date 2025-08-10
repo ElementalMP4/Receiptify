@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"image/color"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -15,6 +16,30 @@ import (
 var creatorComponents []Component
 var creatorContainer *fyne.Container
 var currentCreatorTemplate string
+
+func isPluginCall(token string) bool {
+	return strings.HasPrefix(token, "{{") && strings.HasSuffix(token, "}}")
+}
+
+func tryExpand(component Component) (string, error) {
+	tokens := strings.Split(component.Content, " ")
+	output := []string{}
+
+	for _, token := range tokens {
+		if isPluginCall(token) {
+			callResult, err := RunPlugin(token)
+			if err != nil {
+				return "", err
+			}
+
+			output = append(output, callResult...)
+		} else {
+			output = append(output, token)
+		}
+	}
+
+	return strings.Join(output, " "), nil
+}
 
 func LoadTemplateIntoCreator(tmpl Template) {
 	currentCreatorTemplate = tmpl.Name
@@ -150,7 +175,22 @@ func CreateUI(w fyne.Window) fyne.CanvasObject {
 			dialog.ShowInformation("No Template", "Load a template first.", w)
 			return
 		}
-		err := SendToPrinter(creatorComponents, settings.PrintServerURL)
+
+		expandedComponents := []Component{}
+		for _, component := range creatorComponents {
+			if component.Type == TextComponent || component.Type == QRComponent {
+				output, err := tryExpand(component)
+				if err != nil {
+					dialog.ShowError(err, w)
+					return
+				}
+				component.Content = output
+			}
+
+			expandedComponents = append(expandedComponents, component)
+		}
+
+		err := SendToPrinter(expandedComponents, settings.PrintServerURL)
 		if err != nil {
 			dialog.ShowError(err, w)
 		} else {

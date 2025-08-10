@@ -32,25 +32,36 @@ var testPrint = []Component{
 	},
 }
 
-func loadSettings() {
+func LoadSettings() {
 	data, err := os.ReadFile(settingsFile)
 	if err == nil {
 		json.Unmarshal(data, &settings)
 	}
 }
 
-func saveSettings() {
+func SaveSettings(reloadLua bool, w fyne.Window) {
 	data, _ := json.MarshalIndent(settings, "", "  ")
 	os.WriteFile(settingsFile, data, 0644)
+
+	if reloadLua {
+		err := ConfigureLuaAndLoadPlugins()
+		if err != nil && err.Error() != "plugin path not set" {
+			dialog.ShowError(err, w)
+		}
+	}
 }
 
 func SettingsUI(w fyne.Window) fyne.CanvasObject {
 	urlEntry := widget.NewEntry()
 	urlEntry.SetText(settings.PrintServerURL)
 
+	pluginPathEntry := widget.NewEntry()
+	pluginPathEntry.SetText(settings.PluginPath)
+
 	saveBtn := widget.NewButton("Save", func() {
 		settings.PrintServerURL = urlEntry.Text
-		saveSettings()
+		settings.PluginPath = pluginPathEntry.Text
+		SaveSettings(true, w)
 		dialog.ShowInformation("Saved", "Settings saved!", w)
 	})
 
@@ -68,6 +79,7 @@ func SettingsUI(w fyne.Window) fyne.CanvasObject {
 		MakeHeaderLabel("Settings"),
 		widget.NewForm(
 			widget.NewFormItem("Print Server URL", urlEntry),
+			widget.NewFormItem("Plugin Path", pluginPathEntry),
 			widget.NewFormItem("Test", testPrinterBtn),
 		),
 		saveBtn,
