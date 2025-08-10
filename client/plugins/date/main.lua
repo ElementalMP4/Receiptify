@@ -1,5 +1,5 @@
-date = {}
+Date = {}
 
-function date.currentDate()
+function Date.currentDate()
     return os.date("%d/%m/%Y")
 end

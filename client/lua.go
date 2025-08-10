@@ -45,7 +45,7 @@ func ConfigureLuaAndLoadPlugins() error {
 			if err := json.Unmarshal(manifestData, &manifest); err != nil {
 				return fmt.Errorf("error parsing manifest for %s: %v", folder.Name(), err)
 			}
-			manifests[folder.Name()] = &manifest
+			manifests[manifest.PluginName] = &manifest
 
 			// Set package.path to plugin folder so we can use require()
 			pluginLuaPath := filepath.Join(pluginPath, "?.lua")
