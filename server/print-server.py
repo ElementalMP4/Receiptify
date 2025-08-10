@@ -96,14 +96,14 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
 
         elif ctype == "qr":
             qr_content = component.get("content", "")
-            fit = component.get("fit", True)
-            size = component.get("size", 200)  # px, if fit=False
+            fit = component.get("fit", None)  # None means not set
+            scale = component.get("scale", None)  # None means not set
             align = component.get("align", "center")
 
             if not qr_content:
                 continue
 
-            # Create QR image
+            # Create QR code image
             qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -114,15 +114,19 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
             qr.make(fit=True)
             qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
 
-            # Scale for fit or fixed size
-            if fit:
-                scale = CANVAS_WIDTH / qr_img.width
-                new_size = int(qr_img.width * scale), int(qr_img.height * scale)
-                qr_img = qr_img.resize(new_size, Image.LANCZOS)
-            else:
-                qr_img = qr_img.resize((size, size), Image.LANCZOS)
+            max_width = CANVAS_WIDTH - 40  # padding 20 px each side
 
-            # Align horizontally
+            if fit is True:
+                target_width = max_width
+            elif scale is not None:
+                if not (0 < scale <= 100):
+                    raise ValueError("Scale must be between 1 and 100")
+                target_width = int(max_width * (scale / 100))
+            else:
+                target_width = 200
+
+            qr_img = qr_img.resize((target_width, target_width), Image.LANCZOS)
+
             if align == "center":
                 x = (CANVAS_WIDTH - qr_img.width) // 2
             elif align == "right":
