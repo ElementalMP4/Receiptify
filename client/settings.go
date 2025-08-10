@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
+	"runtime"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -10,7 +12,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var settingsFile = "settings.json"
+var settingsFile string
 var settings AppSettings
 var testPrint = []Component{
 	{
@@ -32,7 +34,42 @@ var testPrint = []Component{
 	},
 }
 
+func getDefaultConfigPath() string {
+	cwd, _ := os.Getwd()
+	cwdSettings := filepath.Join(cwd, "settings.json")
+	if _, err := os.Stat(cwdSettings); err == nil {
+		return cwdSettings
+	}
+
+	home, _ := os.UserHomeDir()
+	if runtime.GOOS == "windows" {
+		appData := os.Getenv("APPDATA")
+		if appData == "" {
+			appData = filepath.Join(home, "AppData", "Roaming")
+		}
+		return filepath.Join(appData, "Receiptify", "settings.json")
+	}
+	return filepath.Join(home, ".config", "receiptify", "settings.json")
+}
+
+func ensureConfigFileExists(path string) error {
+	dir := filepath.Dir(path)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		emptySettings := AppSettings{}
+		data, _ := json.MarshalIndent(emptySettings, "", "  ")
+		return os.WriteFile(path, data, 0644)
+	}
+	return nil
+}
+
 func LoadSettings() {
+	settingsFile = getDefaultConfigPath()
+	_ = ensureConfigFileExists(settingsFile)
 	data, err := os.ReadFile(settingsFile)
 	if err == nil {
 		json.Unmarshal(data, &settings)
