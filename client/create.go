@@ -148,6 +148,14 @@ func CreateUI(w fyne.Window) fyne.CanvasObject {
 
 	buttons := container.NewHBox(loadFromLibraryBtn, loadBtn, exportBtn)
 
+	if len(creatorComponents) != 0 && currentCreatorTemplate != "" {
+		tmpl := Template{
+			Name:   currentCreatorTemplate,
+			Layout: creatorComponents,
+		}
+		LoadTemplateIntoCreator(tmpl)
+	}
+
 	return container.NewVBox(
 		MakeHeaderLabel("Receipt Creator"),
 		templateNameLabel, // Show template name below the header
