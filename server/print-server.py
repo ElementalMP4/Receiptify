@@ -85,7 +85,8 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
                             fill="black",
                             width=1,
                         )
-                    y_offset += text_height + 5
+                    padding = max(5, int(font_size * 0.3))
+                    y_offset += text_height + padding
                 y_offset += 5
 
         elif ctype == "divider":
