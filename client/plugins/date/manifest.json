@@ -1,0 +1,11 @@
+{
+  "name": "Date",
+  "version": "1.0.0",
+  "functions": [
+    {
+      "name": "currentDate",
+      "params": [],
+      "returns": ["string"]
+    }
+  ]
+}
