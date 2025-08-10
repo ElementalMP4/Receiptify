@@ -40,10 +40,24 @@ func LoadTemplateIntoCreator(tmpl Template) {
 				widget.NewLabel(c.Name),
 				entry,
 			))
+
 		case DividerComponent:
 			line := canvas.NewRectangle(color.Black)
 			line.SetMinSize(fyne.NewSize(300, float32(c.LineWidth)))
 			creatorContainer.Add(line)
+
+		case QRComponent:
+			contentEntry := widget.NewEntry()
+			contentEntry.SetText(c.Content)
+			idx := i
+			contentEntry.OnChanged = func(s string) {
+				creatorComponents[idx].Content = s
+			}
+
+			creatorContainer.Add(container.NewVBox(
+				widget.NewLabel(c.Name),
+				contentEntry,
+			))
 		}
 	}
 	creatorContainer.Refresh()

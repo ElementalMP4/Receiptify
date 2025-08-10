@@ -2,7 +2,10 @@ module receiptify
 
 go 1.24.1
 
-require fyne.io/fyne/v2 v2.6.2
+require (
+	fyne.io/fyne/v2 v2.6.2
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+)
 
 require (
 	fyne.io/systray v1.11.0 // indirect

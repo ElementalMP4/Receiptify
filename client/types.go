@@ -12,6 +12,8 @@ type Component struct {
 	FontSize  int           `json:"font_size,omitempty"`
 	LineWidth int           `json:"line_width,omitempty"`
 	Align     string        `json:"align,omitempty"`
+	Fit       bool          `json:"fit,omitempty"`
+	Scale     int           `json:"scale,omitempty"`
 }
 
 type ComponentWidget struct {

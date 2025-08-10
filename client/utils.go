@@ -21,3 +21,10 @@ func MakeHeaderLabel(label string) fyne.CanvasObject {
 		separator,
 	)
 }
+
+func MakeDarkLabel(text string) fyne.CanvasObject {
+	label := canvas.NewText(text, theme.Color(theme.ColorNameForeground))
+	label.Alignment = fyne.TextAlignCenter
+	bg := canvas.NewRectangle(theme.Color(theme.ColorNameBackground))
+	return container.NewStack(bg, label)
+}

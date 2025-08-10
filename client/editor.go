@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"image/color"
 	"strconv"
 	"strings"
+
+	"github.com/skip2/go-qrcode"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -19,6 +22,7 @@ import (
 const (
 	TextComponent    ComponentType = "text"
 	DividerComponent ComponentType = "divider"
+	QRComponent      ComponentType = "qr"
 )
 
 var components []ComponentWidget
@@ -39,7 +43,6 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	componentContainer = container.NewVBox()
 	renderedContainer = container.NewVBox()
 
-	// Template name entry at the top
 	nameEntry := widget.NewEntry()
 	nameEntry.SetPlaceHolder("Template name")
 	nameEntry.SetText(currentTemplateName)
@@ -92,8 +95,19 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 		addComponent(c)
 	})
 
+	addQRBtn := widget.NewButton("Add QR Code", func() {
+		c := Component{
+			Type:    QRComponent,
+			Name:    "QR Code",
+			Content: "https://example.com",
+			Fit:     true,
+			Scale:   100,
+			Align:   "center",
+		}
+		addComponent(c)
+	})
+
 	exportBtn := widget.NewButton("Export JSON", func() {
-		// Use the value from the nameEntry as the template name
 		if strings.TrimSpace(nameEntry.Text) == "" {
 			dialog.ShowInformation("Missing Name", "Please enter a template name before exporting.", w)
 			return
@@ -147,7 +161,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			componentContainer.Objects = nil
 
 			currentTemplateName = imported.Name
-			nameEntry.SetText(imported.Name) // Update the name entry field
+			nameEntry.SetText(imported.Name)
 			for _, c := range imported.Layout {
 				addComponent(c)
 			}
@@ -173,7 +187,6 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 	})
 
 	saveToLibraryBtn := widget.NewButton("Save to Library", func() {
-		// Use the value from the nameEntry as the template name
 		if strings.TrimSpace(nameEntry.Text) == "" {
 			dialog.ShowInformation("Missing Name", "Please enter a template name before saving.", w)
 			return
@@ -226,7 +239,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 					addComponent(c)
 				}
 				currentTemplateName = tmpl.Name
-				nameEntry.SetText(tmpl.Name) // Update the name entry field
+				nameEntry.SetText(tmpl.Name)
 				refreshComponentList()
 			})
 			btn.Importance = widget.MediumImportance
@@ -245,7 +258,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 		refreshComponentList()
 	})
 
-	contentControls := container.NewVBox(MakeHeaderLabel("Content"), addTextBtn, addDividerBtn, clearBtn)
+	contentControls := container.NewVBox(MakeHeaderLabel("Content"), addTextBtn, addDividerBtn, addQRBtn, clearBtn)
 	flowControls := container.NewVBox(MakeHeaderLabel("Data"), importBtn, exportBtn, printBtn)
 	libraryControls := container.NewVBox(MakeHeaderLabel("Library"), saveToLibraryBtn, loadFromLibraryBtn)
 
@@ -259,7 +272,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 
 	return container.NewVBox(
 		MakeHeaderLabel("Template Builder"),
-		nameEntry, // Template name entry just below the header
+		nameEntry,
 		receiptBox,
 		buttons,
 	)
@@ -278,8 +291,10 @@ func addComponent(c Component) {
 	case DividerComponent:
 		line := canvas.NewRectangle(color.Black)
 		line.SetMinSize(fyne.NewSize(300, float32(c.LineWidth)))
+	case QRComponent:
+		img := canvas.NewRectangle(color.Gray{Y: 200})
+		img.SetMinSize(fyne.NewSize(100, 100))
 	}
-
 	wrapper := ComponentWidget{Component: c}
 	components = append(components, wrapper)
 	refreshComponentList()
@@ -340,6 +355,39 @@ func wrapTextLines(text string, fontSize int, width float32, style fyne.TextStyl
 	return container.NewVBox(wrappedLines...)
 }
 
+func renderQRCode(c Component) fyne.CanvasObject {
+	img, err := qrcode.New(c.Content, qrcode.Medium)
+	if err != nil {
+		return canvas.NewText("Invalid QR data", color.RGBA{255, 0, 0, 255})
+	}
+
+	baseWidth := float64(300)
+	var size int
+	if c.Fit {
+		size = int(baseWidth)
+	} else {
+		if c.Scale <= 0 {
+			c.Scale = 100
+		}
+		size = int(baseWidth * float64(c.Scale) / 100.0)
+	}
+
+	var buf bytes.Buffer
+	_ = img.Write(size, &buf)
+	res := canvas.NewImageFromReader(&buf, "qr.png")
+	res.FillMode = canvas.ImageFillContain
+	res.SetMinSize(fyne.NewSize(float32(size), float32(size)))
+
+	switch c.Align {
+	case "center":
+		return container.NewHBox(layout.NewSpacer(), res, layout.NewSpacer())
+	case "right":
+		return container.NewHBox(layout.NewSpacer(), res)
+	default:
+		return container.NewHBox(res, layout.NewSpacer())
+	}
+}
+
 func refreshComponentList() {
 	componentContainer.Objects = nil
 	renderedContainer.Objects = nil
@@ -366,6 +414,11 @@ func refreshComponentList() {
 			line := canvas.NewRectangle(color.Black)
 			line.SetMinSize(fyne.NewSize(300, float32(c.LineWidth)))
 			editorWidget = line
+		case QRComponent:
+			qrLabel := MakeDarkLabel("QR: " + c.Name)
+			bg := canvas.NewRectangle(color.RGBA{R: 30, G: 30, B: 30, A: 255})
+			editorWidget = container.NewStack(bg, qrLabel)
+
 		}
 
 		moveUp := widget.NewButtonWithIcon("", theme.MoveUpIcon(), func() {
@@ -411,6 +464,8 @@ func refreshComponentList() {
 			line := canvas.NewRectangle(color.Black)
 			line.SetMinSize(fyne.NewSize(300, float32(c.LineWidth)))
 			preview = line
+		case QRComponent:
+			preview = renderQRCode(c)
 		}
 		renderedContainer.Add(preview)
 	}
@@ -476,8 +531,8 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 		})
 
 		content = container.NewVBox(form, saveBtn)
-	case DividerComponent:
 
+	case DividerComponent:
 		lineWidth := widget.NewEntry()
 		lineWidth.SetText(strconv.Itoa(c.LineWidth))
 
@@ -496,6 +551,57 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 			updated.LineWidth = lw
 			updated.Name = nameEntry.Text
 
+			*wrapper = ComponentWidget{Component: updated}
+			refreshComponentList()
+			editDialog.Hide()
+		})
+
+		content = container.NewVBox(form, saveBtn)
+
+	case QRComponent:
+		contentEntry := widget.NewEntry()
+		contentEntry.SetText(c.Content)
+
+		nameEntry := widget.NewEntry()
+		nameEntry.SetText(c.Name)
+
+		alignSelect := widget.NewSelect([]string{"left", "center", "right"}, func(s string) {})
+		alignSelect.SetSelected(c.Align)
+
+		fitCheck := widget.NewCheck("Fit to available space", nil)
+		fitCheck.SetChecked(c.Fit)
+
+		scaleEntry := widget.NewEntry()
+		scaleEntry.SetText(strconv.Itoa(c.Scale))
+		if c.Fit {
+			scaleEntry.Disable()
+		}
+		fitCheck.OnChanged = func(checked bool) {
+			if checked {
+				scaleEntry.Disable()
+			} else {
+				scaleEntry.Enable()
+			}
+		}
+
+		form.Append("Content", contentEntry)
+		form.Append("Name", nameEntry)
+		form.Append("Alignment", alignSelect)
+		form.Append("", fitCheck)
+		form.Append("Scale (%)", scaleEntry)
+
+		saveBtn := widget.NewButton("Save", func() {
+			updated.Content = contentEntry.Text
+			updated.Name = nameEntry.Text
+			updated.Align = alignSelect.Selected
+			updated.Fit = fitCheck.Checked
+			if !fitCheck.Checked {
+				scale, err := strconv.Atoi(scaleEntry.Text)
+				if err != nil || scale <= 0 {
+					scale = 100
+				}
+				updated.Scale = scale
+			}
 			*wrapper = ComponentWidget{Component: updated}
 			refreshComponentList()
 			editDialog.Hide()
