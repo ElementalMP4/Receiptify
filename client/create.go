@@ -52,7 +52,6 @@ func LoadTemplateIntoCreator(tmpl Template) {
 func CreateUI(w fyne.Window) fyne.CanvasObject {
 	creatorContainer = container.NewVBox(widget.NewLabel("No template loaded."))
 
-	// Label to show the current template name
 	templateNameLabel := widget.NewLabel("")
 	updateTemplateNameLabel := func() {
 		if currentCreatorTemplate != "" {
@@ -158,7 +157,7 @@ func CreateUI(w fyne.Window) fyne.CanvasObject {
 
 	return container.NewVBox(
 		MakeHeaderLabel("Receipt Creator"),
-		templateNameLabel, // Show template name below the header
+		templateNameLabel,
 		buttons,
 		widget.NewSeparator(),
 		creatorContainer,
