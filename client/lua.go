@@ -1,14 +1,19 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
 	lua "github.com/yuin/gopher-lua"
 )
+
+//go:embed plugins/*
+var embeddedPlugins embed.FS
 
 var (
 	manifests map[string]*PluginManifest
@@ -24,15 +29,94 @@ func ConfigureLuaAndLoadPlugins() error {
 	}
 
 	luaVm = lua.NewState()
-	pluginFolders, err := os.ReadDir(settings.PluginPath)
+
+	if err := loadPluginsFromFS(embeddedPlugins, "plugins"); err != nil {
+		return fmt.Errorf("error loading embedded plugins: %v", err)
+	}
+
+	if err := loadPluginsFromDisk(settings.PluginPath); err != nil {
+		return fmt.Errorf("error loading external plugins: %v", err)
+	}
+
+	return nil
+}
+
+func loadPluginsFromFS(fsys fs.FS, root string) error {
+	entries, err := fs.ReadDir(fsys, root)
 	if err != nil {
 		return err
 	}
 
-	// Load plugins and manifests
+	for _, entry := range entries {
+		if entry.IsDir() {
+			pluginPath := filepath.Join(root, entry.Name())
+			fmt.Println("Loading embedded plugin:", entry.Name())
+
+			// Read manifest.json
+			manifestData, err := fs.ReadFile(fsys, filepath.Join(pluginPath, "manifest.json"))
+			if err != nil {
+				return fmt.Errorf("error reading manifest for %s: %v", entry.Name(), err)
+			}
+
+			var manifest PluginManifest
+			if err := json.Unmarshal(manifestData, &manifest); err != nil {
+				return fmt.Errorf("error parsing manifest for %s: %v", entry.Name(), err)
+			}
+			manifests[manifest.PluginName] = &manifest
+
+			// Register plugin-scoped loader for embedded plugin
+			registerLuaLoader(luaVm, makePluginLoaderFromFS(fsys, pluginPath))
+
+			// Load main.lua
+			luaCode, err := fs.ReadFile(fsys, filepath.Join(pluginPath, "main.lua"))
+			if err != nil {
+				return fmt.Errorf("error reading main.lua for %s: %v", entry.Name(), err)
+			}
+			if err := luaVm.DoString(string(luaCode)); err != nil {
+				return fmt.Errorf("failed to load main.lua for %s: %v", entry.Name(), err)
+			}
+
+			fmt.Printf("Successfully loaded embedded plugin %s %s from %s\n",
+				manifest.PluginName, manifest.Version, entry.Name())
+		}
+	}
+
+	return nil
+}
+
+func makePluginLoaderFromFS(fsys fs.FS, pluginPath string) lua.LGFunction {
+	return func(L *lua.LState) int {
+		moduleName := L.ToString(1)
+		filename := moduleName + ".lua"
+		fullPath := filepath.Join(pluginPath, filename)
+
+		data, err := fs.ReadFile(fsys, fullPath)
+		if err != nil {
+			return 0 // not found
+		}
+
+		fn, err := L.LoadString(string(data))
+		if err != nil {
+			L.RaiseError("error compiling module %s: %v", moduleName, err)
+		}
+
+		L.Push(fn)
+		return 1
+	}
+}
+
+func loadPluginsFromDisk(pluginDir string) error {
+	pluginFolders, err := os.ReadDir(pluginDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // no external plugins yet
+		}
+		return err
+	}
+
 	for _, folder := range pluginFolders {
 		if folder.IsDir() {
-			pluginPath := filepath.Join(settings.PluginPath, folder.Name())
+			pluginPath := filepath.Join(pluginDir, folder.Name())
 			fmt.Println("Loading plugin from folder:", folder.Name())
 
 			manifestPath := filepath.Join(pluginPath, "manifest.json")
@@ -47,12 +131,8 @@ func ConfigureLuaAndLoadPlugins() error {
 			}
 			manifests[manifest.PluginName] = &manifest
 
-			// Set package.path to plugin folder so we can use require()
-			pluginLuaPath := filepath.Join(pluginPath, "?.lua")
-			packagePathSetLua := fmt.Sprintf(`package.path = "%s;" .. package.path`, pluginLuaPath)
-			if err := luaVm.DoString(packagePathSetLua); err != nil {
-				return fmt.Errorf("failed to set package.path for plugin %s: %v", folder.Name(), err)
-			}
+			// Register plugin-scoped loader for disk plugin
+			registerLuaLoader(luaVm, makePluginLoaderFromDisk(pluginPath))
 
 			// Load main.lua
 			mainLuaPath := filepath.Join(pluginPath, "main.lua")
@@ -60,11 +140,43 @@ func ConfigureLuaAndLoadPlugins() error {
 				return fmt.Errorf("failed to load main.lua for plugin %s: %v", folder.Name(), err)
 			}
 
-			fmt.Printf("Successfully loaded %s %s from %s\n", manifest.PluginName, manifest.Version, folder.Name())
+			fmt.Printf("Successfully loaded %s %s from %s\n",
+				manifest.PluginName, manifest.Version, folder.Name())
 		}
 	}
 
 	return nil
+}
+
+func makePluginLoaderFromDisk(pluginPath string) lua.LGFunction {
+	return func(L *lua.LState) int {
+		moduleName := L.ToString(1)
+		filename := moduleName + ".lua"
+		fullPath := filepath.Join(pluginPath, filename)
+
+		data, err := os.ReadFile(fullPath)
+		if err != nil {
+			return 0 // not found
+		}
+
+		fn, err := L.LoadString(string(data))
+		if err != nil {
+			L.RaiseError("error compiling module %s: %v", moduleName, err)
+		}
+
+		L.Push(fn)
+		return 1
+	}
+}
+
+func registerLuaLoader(L *lua.LState, loader lua.LGFunction) {
+	packageTable := L.GetGlobal("package").(*lua.LTable)
+	searchers := L.GetField(packageTable, "searchers")
+	if searchers == lua.LNil {
+		searchers = L.GetField(packageTable, "loaders")
+	}
+	searchersTable := searchers.(*lua.LTable)
+	searchersTable.Append(L.NewFunction(loader))
 }
 
 func RunPlugin(token string) ([]string, error) {
