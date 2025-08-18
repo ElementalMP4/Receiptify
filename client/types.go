@@ -2,6 +2,12 @@ package main
 
 import "fyne.io/fyne/v2"
 
+const (
+	TextComponent    ComponentType = "text"
+	DividerComponent ComponentType = "divider"
+	QRComponent      ComponentType = "qr"
+)
+
 type Component struct {
 	Type      ComponentType `json:"type"`
 	Name      string        `json:"name"`

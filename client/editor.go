@@ -19,12 +19,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-const (
-	TextComponent    ComponentType = "text"
-	DividerComponent ComponentType = "divider"
-	QRComponent      ComponentType = "qr"
-)
-
 var components []ComponentWidget
 var componentContainer *fyne.Container
 var renderedContainer *fyne.Container
