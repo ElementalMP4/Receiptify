@@ -65,3 +65,15 @@ return helper
 ```
 
 This code is not an efficient use of files, but is included to demonstrate how you can split your code into different files.
+
+## Text Types
+
+Text fields can have one of three types:
+
+- text
+- header
+- macro
+
+Fundamentally, these different values do nothing. The only noticeable difference in the Receiptify UI is that `macro` and `header` objects cannot be edited in the receipt creator. These values are designed for consumption by downstream systems, to differentiate them from normal text. 
+
+**All text fields are always run through the plugins, regardless of type.**

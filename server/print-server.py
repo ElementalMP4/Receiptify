@@ -64,7 +64,7 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
                 font = ImageFont.truetype(DEFAULT_FONT_PATH, font_size)
 
             for paragraph in text.split('\n'):
-                lines = wrap_text(draw, paragraph, font, CANVAS_WIDTH - 40)
+                lines = wrap_text(draw, paragraph, font, CANVAS_WIDTH - 20)
                 for line in lines:
                     bbox = draw.textbbox((0, 0), line, font=font)
                     text_width = bbox[2] - bbox[0]
@@ -73,9 +73,9 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
                     if align == "center":
                         x = (CANVAS_WIDTH - text_width) // 2
                     elif align == "right":
-                        x = CANVAS_WIDTH - text_width - 20
+                        x = CANVAS_WIDTH - text_width - 10
                     else:
-                        x = 20
+                        x = 10
 
                     draw.text((x, y_offset), line, font=font, fill="black")
 

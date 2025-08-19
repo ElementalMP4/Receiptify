@@ -274,7 +274,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 
 func addComponent(c Component) {
 	switch c.Type {
-	case TextComponent:
+	case TextComponent, MacroComponent, HeaderComponent:
 		entry := widget.NewEntry()
 		entry.Text = c.Content
 		entry.MultiLine = true
@@ -391,7 +391,7 @@ func refreshComponentList() {
 
 		var editorWidget fyne.CanvasObject
 		switch c.Type {
-		case TextComponent:
+		case TextComponent, HeaderComponent, MacroComponent:
 			entry := widget.NewEntry()
 			entry.Text = c.Content
 			entry.MultiLine = true
@@ -451,7 +451,7 @@ func refreshComponentList() {
 
 		var preview fyne.CanvasObject
 		switch c.Type {
-		case TextComponent:
+		case TextComponent, HeaderComponent, MacroComponent:
 			style := fyne.TextStyle{Bold: c.Bold, Italic: c.Italic}
 			preview = wrapTextLines(c.Content, c.FontSize, 300, style, color.Black, c.Align)
 		case DividerComponent:
@@ -476,7 +476,7 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 	var editDialog *dialog.CustomDialog
 
 	switch c.Type {
-	case TextComponent:
+	case TextComponent, HeaderComponent, MacroComponent:
 		textEntry := widget.NewEntry()
 		textEntry.SetText(c.Content)
 
@@ -497,11 +497,15 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 
 		alignSelect := widget.NewSelect([]string{"left", "center", "right"}, func(s string) {})
 		alignSelect.SetSelected(c.Align)
-		form.Append("Alignment", alignSelect)
 
+		typeOverrideSelect := widget.NewSelect([]string{"text", "header", "macro"}, func(s string) {})
+		typeOverrideSelect.Selected = string(c.Type)
+
+		form.Append("Alignment", alignSelect)
 		form.Append("Text", textEntry)
 		form.Append("Name", nameEntry)
 		form.Append("Font Size", fontSize)
+		form.Append("Type Override", typeOverrideSelect)
 		form.Append("", bold)
 		form.Append("", italic)
 		form.Append("", underline)

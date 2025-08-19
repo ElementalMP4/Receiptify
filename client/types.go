@@ -6,6 +6,8 @@ const (
 	TextComponent    ComponentType = "text"
 	DividerComponent ComponentType = "divider"
 	QRComponent      ComponentType = "qr"
+	MacroComponent   ComponentType = "macro"
+	HeaderComponent  ComponentType = "header"
 )
 
 type Component struct {
