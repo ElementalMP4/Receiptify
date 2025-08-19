@@ -67,6 +67,13 @@ func loadPluginsFromFS(fsys fs.FS, root string) error {
 			// Register plugin-scoped loader for embedded plugin
 			registerLuaLoader(luaVm, makePluginLoaderFromFS(fsys, pluginPath))
 
+			// Set data folder path
+			dataPath := filepath.Join(settings.PluginPath, entry.Name(), "data")
+			if err := os.MkdirAll(dataPath, 0755); err != nil {
+				return fmt.Errorf("failed to create data folder for embedded plugin %s: %v", entry.Name(), err)
+			}
+			luaVm.SetGlobal(strings.ToUpper(manifest.PluginName)+"_DATA_FOLDER", lua.LString(dataPath))
+
 			// Load main.lua
 			luaCode, err := fs.ReadFile(fsys, filepath.Join(pluginPath, "main.lua"))
 			if err != nil {
@@ -117,9 +124,14 @@ func loadPluginsFromDisk(pluginDir string) error {
 	for _, folder := range pluginFolders {
 		if folder.IsDir() {
 			pluginPath := filepath.Join(pluginDir, folder.Name())
-			fmt.Println("Loading plugin from folder:", folder.Name())
 
 			manifestPath := filepath.Join(pluginPath, "manifest.json")
+			if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+				continue
+			}
+
+			fmt.Println("Loading plugin from disk:", folder.Name())
+
 			manifestData, err := os.ReadFile(manifestPath)
 			if err != nil {
 				return fmt.Errorf("error reading manifest for %s: %v", folder.Name(), err)
@@ -133,6 +145,14 @@ func loadPluginsFromDisk(pluginDir string) error {
 
 			// Register plugin-scoped loader for disk plugin
 			registerLuaLoader(luaVm, makePluginLoaderFromDisk(pluginPath))
+
+			// Set data folder path
+			dataPath := filepath.Join(pluginPath, "data")
+			if err := os.MkdirAll(dataPath, 0755); err != nil {
+				return fmt.Errorf("failed to create data folder for plugin %s: %v", folder.Name(), err)
+			}
+
+			luaVm.SetGlobal(strings.ToUpper(manifest.PluginName)+"_DATA_FOLDER", lua.LString(dataPath))
 
 			// Load main.lua
 			mainLuaPath := filepath.Join(pluginPath, "main.lua")

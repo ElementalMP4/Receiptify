@@ -1,6 +1,6 @@
 Reference = {}
 
-local state_file = "refs.ini"
+local state_file = REFERENCE_DATA_FOLDER .. "/refs.ini"
 local refs = {}
 
 local function load_refs()
