@@ -49,7 +49,7 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
     for component in template:
         ctype = component["type"]
 
-        if ctype == "text":
+        if ctype in ["text", "header", "macro"]:
             text = component.get("content", "")
             font_size = component.get("font_size", 14) * 2
             align = component.get("align", "left")
