@@ -522,6 +522,7 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 			updated.Italic = italic.Checked
 			updated.Underline = underline.Checked
 			updated.Align = alignSelect.Selected
+			updated.Type = ComponentType(typeOverrideSelect.Selected)
 
 			*wrapper = ComponentWidget{Component: updated}
 			refreshComponentList()
