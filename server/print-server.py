@@ -58,10 +58,30 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
             underline = component.get("underline", False)
 
             font_path_using = get_font_path(font_path, bold=bold, italic=italic)
-            try:
-                font = ImageFont.truetype(font_path_using, font_size)
-            except IOError:
-                font = ImageFont.truetype(DEFAULT_FONT_PATH, font_size)
+
+            if font_size == "fit":
+                test_size = 200  
+                while test_size > 10:
+                    try:
+                        test_font = ImageFont.truetype(font_path_using, test_size)
+                    except IOError:
+                        test_font = ImageFont.truetype(DEFAULT_FONT_PATH, test_size)
+
+                    bbox = draw.textbbox((0, 0), text, font=test_font)
+                    text_width = bbox[2] - bbox[0]
+                    if text_width <= (CANVAS_WIDTH - 20):
+                        font = test_font
+                        font_size = test_size
+                        break
+                    test_size -= 2
+                else:
+                    font = ImageFont.truetype(DEFAULT_FONT_PATH, 14)
+                    font_size = 14
+            else:
+                try:
+                    font = ImageFont.truetype(font_path_using, font_size)
+                except IOError:
+                    font = ImageFont.truetype(DEFAULT_FONT_PATH, font_size)
 
             for paragraph in text.split('\n'):
                 lines = wrap_text(draw, paragraph, font, CANVAS_WIDTH - 20)
