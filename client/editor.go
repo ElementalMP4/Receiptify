@@ -75,7 +75,7 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 			Type:     TextComponent,
 			Name:     "Text Component",
 			Content:  "Editable text here",
-			FontSize: 14,
+			FontSize: "14",
 		}
 		addComponent(c)
 	})
@@ -453,7 +453,11 @@ func refreshComponentList() {
 		switch c.Type {
 		case TextComponent, HeaderComponent, MacroComponent:
 			style := fyne.TextStyle{Bold: c.Bold, Italic: c.Italic}
-			preview = wrapTextLines(c.Content, c.FontSize, 300, style, color.Black, c.Align)
+			fontSizeValue, err := strconv.Atoi(c.FontSize)
+			if err != nil {
+				fontSizeValue = 14
+			}
+			preview = wrapTextLines(c.Content, fontSizeValue, 300, style, color.Black, c.Align)
 		case DividerComponent:
 			line := canvas.NewRectangle(color.Black)
 			line.SetMinSize(fyne.NewSize(300, float32(c.LineWidth)))
@@ -484,7 +488,7 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 		nameEntry.SetText(c.Name)
 
 		fontSize := widget.NewEntry()
-		fontSize.SetText(strconv.Itoa(c.FontSize))
+		fontSize.SetText(c.FontSize)
 
 		bold := widget.NewCheck("Bold", nil)
 		bold.SetChecked(c.Bold)
@@ -511,9 +515,12 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 		form.Append("", underline)
 
 		saveBtn := widget.NewButton("Save", func() {
-			fs, err := strconv.Atoi(fontSize.Text)
-			if err != nil {
-				fs = 14
+			fs := "14"
+			if fontSize.Text != "fit" {
+				_, err := strconv.Atoi(fontSize.Text)
+				if err != nil {
+					fs = "14"
+				}
 			}
 			updated.Content = textEntry.Text
 			updated.Name = nameEntry.Text

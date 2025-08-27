@@ -20,7 +20,7 @@ var testPrint = []Component{
 		Type:     TextComponent,
 		Content:  "Hello World!",
 		Bold:     true,
-		FontSize: 32,
+		FontSize: "32",
 		Align:    "center",
 	},
 	{
@@ -31,7 +31,7 @@ var testPrint = []Component{
 		Type:     TextComponent,
 		Content:  "Does this thing even work?",
 		Italic:   true,
-		FontSize: 14,
+		FontSize: "14",
 	},
 }
 

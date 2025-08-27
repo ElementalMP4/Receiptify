@@ -17,7 +17,7 @@ type Component struct {
 	Bold      bool          `json:"bold,omitempty"`
 	Italic    bool          `json:"italic,omitempty"`
 	Underline bool          `json:"underline,omitempty"`
-	FontSize  int           `json:"font_size,omitempty"`
+	FontSize  string        `json:"font_size,omitempty"`
 	LineWidth int           `json:"line_width,omitempty"`
 	Align     string        `json:"align,omitempty"`
 	Fit       bool          `json:"fit,omitempty"`
