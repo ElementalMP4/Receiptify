@@ -51,19 +51,19 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
 
         if ctype in ["text", "header", "macro"]:
             text = component.get("content", "")
-            font_size = component.get("font_size", 14) * 2
             align = component.get("align", "left")
             bold = component.get("bold", False)
             italic = component.get("italic", False)
             underline = component.get("underline", False)
 
-            font_path_using = get_font_path(font_path, bold=bold, italic=italic)
-
-            if font_size == "fit":
-                test_size = 200  
+            font_size_raw = component.get("font_size", "14")
+            font_size = 0
+            if str(font_size_raw).lower() == "fit":
+                # Special "fit" logic
+                test_size = 200
                 while test_size > 10:
                     try:
-                        test_font = ImageFont.truetype(font_path_using, test_size)
+                        test_font = ImageFont.truetype(get_font_path(font_path, bold=bold, italic=italic), test_size)
                     except IOError:
                         test_font = ImageFont.truetype(DEFAULT_FONT_PATH, test_size)
 
@@ -79,9 +79,14 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
                     font_size = 14
             else:
                 try:
-                    font = ImageFont.truetype(font_path_using, font_size)
+                    font_size = int(font_size_raw)
+                except (ValueError, TypeError):
+                    font_size = 14
+
+                try:
+                    font = ImageFont.truetype(get_font_path(font_path, bold=bold, italic=italic), font_size * 2)
                 except IOError:
-                    font = ImageFont.truetype(DEFAULT_FONT_PATH, font_size)
+                    font = ImageFont.truetype(DEFAULT_FONT_PATH, font_size * 2)
 
             for paragraph in text.split('\n'):
                 lines = wrap_text(draw, paragraph, font, CANVAS_WIDTH - 20)

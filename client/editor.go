@@ -515,7 +515,7 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 		form.Append("", underline)
 
 		saveBtn := widget.NewButton("Save", func() {
-			fs := "14"
+			fs := fontSize.Text
 			if fontSize.Text != "fit" {
 				_, err := strconv.Atoi(fontSize.Text)
 				if err != nil {
