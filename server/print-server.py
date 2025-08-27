@@ -4,6 +4,8 @@ import qrcode
 from flask import Flask, request, jsonify
 from escpos.printer import Usb
 from PIL import Image, ImageDraw, ImageFont
+import base64
+import io
 
 DEFAULT_FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 CANVAS_WIDTH = 512
@@ -59,7 +61,6 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
             font_size_raw = component.get("font_size", "14")
             font_size = 0
             if str(font_size_raw).lower() == "fit":
-                # Special "fit" logic
                 test_size = 200
                 while test_size > 10:
                     try:
@@ -122,14 +123,13 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
 
         elif ctype == "qr":
             qr_content = component.get("content", "")
-            fit = component.get("fit", None)  # None means not set
-            scale = component.get("scale", None)  # None means not set
+            fit = component.get("fit", None)
+            scale = component.get("scale", None)
             align = component.get("align", "center")
 
             if not qr_content:
                 continue
 
-            # Create QR code image
             qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -140,7 +140,7 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
             qr.make(fit=True)
             qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
 
-            max_width = CANVAS_WIDTH - 40  # padding 20 px each side
+            max_width = CANVAS_WIDTH - 40
 
             if fit is True:
                 target_width = max_width
@@ -162,6 +162,50 @@ def render_receipt(template: list[dict], font_path=DEFAULT_FONT_PATH) -> Image.I
 
             img.paste(qr_img, (x, y_offset))
             y_offset += qr_img.height + 10
+
+        elif ctype == "image":
+            b64_data = component.get("content", "")
+            if not b64_data:
+                continue
+
+            try:
+                img_data = base64.b64decode(b64_data)
+                pil_img = Image.open(io.BytesIO(img_data)).convert("RGB")
+            except Exception:
+                continue
+
+            fit = component.get("fit", False)
+            scale = component.get("scale", None)
+            pixel_width = component.get("width", None)
+            align = component.get("align", "center")
+
+            max_width = CANVAS_WIDTH - 40
+
+            if fit:
+                target_width = max_width
+            elif pixel_width is not None:
+                target_width = min(pixel_width, max_width)
+            elif scale is not None:
+                if not (0 < scale <= 100):
+                    raise ValueError("Scale must be between 1 and 100")
+                target_width = int(max_width * (scale / 100))
+            else:
+                target_width = min(pil_img.width, max_width)
+
+            aspect_ratio = pil_img.height / pil_img.width
+            target_height = int(target_width * aspect_ratio)
+
+            pil_img = pil_img.resize((target_width, target_height), Image.LANCZOS)
+
+            if align == "center":
+                x = (CANVAS_WIDTH - pil_img.width) // 2
+            elif align == "right":
+                x = CANVAS_WIDTH - pil_img.width - 20
+            else:  # left
+                x = 20
+
+            img.paste(pil_img, (x, y_offset))
+            y_offset += pil_img.height + 10
 
     final_img = img.crop((0, 0, CANVAS_WIDTH, y_offset + 20))
     _, final_height = final_img.size
