@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"image/color"
+	"io"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -82,6 +85,59 @@ func LoadTemplateIntoCreator(tmpl Template) {
 			creatorContainer.Add(container.NewVBox(
 				widget.NewLabel(c.Name),
 				contentEntry,
+			))
+		case ImageComponent:
+			idx := i
+			var pickBtn *widget.Button
+			pickBtn = widget.NewButton("Choose Image", func() {
+				fd := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+					if err != nil || reader == nil {
+						return
+					}
+					defer reader.Close()
+
+					buf := new(bytes.Buffer)
+					_, err = io.Copy(buf, reader)
+					if err != nil {
+						dialog.ShowError(err, fyne.CurrentApp().Driver().AllWindows()[0])
+						return
+					}
+
+					creatorComponents[idx].Content = base64.StdEncoding.EncodeToString(buf.Bytes())
+
+					img := canvas.NewImageFromReader(bytes.NewReader(buf.Bytes()), reader.URI().Name())
+					img.FillMode = canvas.ImageFillContain
+					img.SetMinSize(fyne.NewSize(200, 150))
+
+					creatorContainer.Objects[idx] = container.NewVBox(
+						widget.NewLabel(c.Name),
+						img,
+						pickBtn,
+					)
+					creatorContainer.Refresh()
+				}, fyne.CurrentApp().Driver().AllWindows()[0])
+				fd.SetFilter(storage.NewExtensionFileFilter([]string{".png", ".jpg", ".jpeg"}))
+				fd.Show()
+			})
+
+			var preview fyne.CanvasObject
+			if c.Content != "" {
+				data, err := base64.StdEncoding.DecodeString(c.Content)
+				if err == nil {
+					preview = canvas.NewImageFromReader(bytes.NewReader(data), c.Name)
+					preview.(*canvas.Image).FillMode = canvas.ImageFillContain
+					preview.(*canvas.Image).SetMinSize(fyne.NewSize(200, 150))
+				} else {
+					preview = widget.NewLabel("Invalid image data")
+				}
+			} else {
+				preview = widget.NewLabel("No image selected")
+			}
+
+			creatorContainer.Add(container.NewVBox(
+				widget.NewLabel(c.Name),
+				preview,
+				pickBtn,
 			))
 		}
 	}

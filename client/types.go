@@ -8,6 +8,7 @@ const (
 	QRComponent      ComponentType = "qr"
 	MacroComponent   ComponentType = "macro"
 	HeaderComponent  ComponentType = "header"
+	ImageComponent   ComponentType = "image"
 )
 
 type Component struct {
@@ -22,6 +23,7 @@ type Component struct {
 	Align     string        `json:"align,omitempty"`
 	Fit       bool          `json:"fit,omitempty"`
 	Scale     int           `json:"scale,omitempty"`
+	Width     int           `json:"width,omitempty"`
 }
 
 type ComponentWidget struct {

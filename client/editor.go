@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"image/color"
 	"strconv"
@@ -252,7 +253,20 @@ func EditorUI(w fyne.Window) fyne.CanvasObject {
 		refreshComponentList()
 	})
 
-	contentControls := container.NewVBox(MakeHeaderLabel("Content"), addTextBtn, addDividerBtn, addQRBtn, clearBtn)
+	addImageBtn := widget.NewButton("Add Image", func() {
+		c := Component{
+			Type:    ImageComponent,
+			Name:    "Image",
+			Align:   "center",
+			Fit:     false,
+			Scale:   100,
+			Width:   0,
+			Content: "",
+		}
+		addComponent(c)
+	})
+
+	contentControls := container.NewVBox(MakeHeaderLabel("Content"), addTextBtn, addDividerBtn, addQRBtn, addImageBtn, clearBtn)
 	flowControls := container.NewVBox(MakeHeaderLabel("Data"), importBtn, exportBtn, printBtn)
 	libraryControls := container.NewVBox(MakeHeaderLabel("Library"), saveToLibraryBtn, loadFromLibraryBtn)
 
@@ -288,6 +302,9 @@ func addComponent(c Component) {
 	case QRComponent:
 		img := canvas.NewRectangle(color.Gray{Y: 200})
 		img.SetMinSize(fyne.NewSize(100, 100))
+	case "image":
+		img := canvas.NewRectangle(color.Gray{Y: 150})
+		img.SetMinSize(fyne.NewSize(200, 150))
 	}
 	wrapper := ComponentWidget{Component: c}
 	components = append(components, wrapper)
@@ -412,7 +429,6 @@ func refreshComponentList() {
 			qrLabel := MakeDarkLabel("QR: " + c.Name)
 			bg := canvas.NewRectangle(color.RGBA{R: 30, G: 30, B: 30, A: 255})
 			editorWidget = container.NewStack(bg, qrLabel)
-
 		}
 
 		moveUp := widget.NewButtonWithIcon("", theme.MoveUpIcon(), func() {
@@ -464,6 +480,21 @@ func refreshComponentList() {
 			preview = line
 		case QRComponent:
 			preview = renderQRCode(c)
+		case ImageComponent:
+			if c.Content != "" {
+				// Decode base64 into image
+				data, err := base64.StdEncoding.DecodeString(c.Content)
+				if err == nil {
+					res := canvas.NewImageFromReader(bytes.NewReader(data), c.Name)
+					res.FillMode = canvas.ImageFillContain
+					res.SetMinSize(fyne.NewSize(200, 150))
+					preview = res
+				} else {
+					preview = canvas.NewText("Invalid Image", color.RGBA{255, 0, 0, 255})
+				}
+			} else {
+				preview = canvas.NewText("No image selected", color.Gray{Y: 128})
+			}
 		}
 		renderedContainer.Add(preview)
 	}
@@ -598,6 +629,71 @@ func showEditDialog(c Component, wrapper *ComponentWidget) {
 
 		saveBtn := widget.NewButton("Save", func() {
 			updated.Content = contentEntry.Text
+			updated.Name = nameEntry.Text
+			updated.Align = alignSelect.Selected
+			updated.Fit = fitCheck.Checked
+			if !fitCheck.Checked {
+				scale, err := strconv.Atoi(scaleEntry.Text)
+				if err != nil || scale <= 0 {
+					scale = 100
+				}
+				updated.Scale = scale
+			}
+			*wrapper = ComponentWidget{Component: updated}
+			refreshComponentList()
+			editDialog.Hide()
+		})
+
+		content = container.NewVBox(form, saveBtn)
+	case ImageComponent:
+		nameEntry := widget.NewEntry()
+		nameEntry.SetText(c.Name)
+
+		alignSelect := widget.NewSelect([]string{"left", "center", "right"}, func(s string) {})
+		alignSelect.SetSelected(c.Align)
+
+		fitCheck := widget.NewCheck("Fit to width", nil)
+		fitCheck.SetChecked(c.Fit)
+
+		scaleEntry := widget.NewEntry()
+		scaleEntry.SetText(strconv.Itoa(c.Scale))
+		if c.Fit {
+			scaleEntry.Disable()
+		}
+		fitCheck.OnChanged = func(checked bool) {
+			if checked {
+				scaleEntry.Disable()
+			} else {
+				scaleEntry.Enable()
+			}
+		}
+
+		pickBtn := widget.NewButton("Choose Image", func() {
+			fd := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+				if err != nil || reader == nil {
+					return
+				}
+				defer reader.Close()
+				buf := new(bytes.Buffer)
+				_, err = buf.ReadFrom(reader)
+				if err != nil {
+					dialog.ShowError(err, fyne.CurrentApp().Driver().AllWindows()[0])
+					return
+				}
+				updated.Content = base64.StdEncoding.EncodeToString(buf.Bytes())
+				updated.Name = reader.URI().Name()
+			}, fyne.CurrentApp().Driver().AllWindows()[0])
+			fd.SetFilter(storage.NewExtensionFileFilter([]string{".png", ".jpg", ".jpeg"}))
+			fd.Show()
+		})
+
+		form.Append("Name", nameEntry)
+		form.Append("Alignment", alignSelect)
+		form.Append("", fitCheck)
+		form.Append("Scale (%)", scaleEntry)
+		form.Append("Image File", pickBtn)
+
+		saveBtn := widget.NewButton("Save", func() {
 			updated.Name = nameEntry.Text
 			updated.Align = alignSelect.Selected
 			updated.Fit = fitCheck.Checked
