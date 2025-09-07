@@ -10,10 +10,6 @@
       "from": "cwd"
     },
     {
-      "file": "trim-tool.py",
-      "from": "cwd"
-    },
-    {
       "file": "requirements.txt",
       "from": "cwd"
     },
